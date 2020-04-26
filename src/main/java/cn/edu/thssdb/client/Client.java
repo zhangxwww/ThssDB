@@ -1,7 +1,7 @@
 package cn.edu.thssdb.client;
 
+import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.rpc.thrift.GetTimeReq;
-import cn.edu.thssdb.rpc.thrift.IService;
 import cn.edu.thssdb.utils.Global;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.CommandLineParser;
@@ -19,6 +19,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.PrintStream;
+import java.util.List;
 import java.util.Scanner;
 
 public class Client {
@@ -41,6 +42,8 @@ public class Client {
   private static TProtocol protocol;
   private static IService.Client client;
   private static CommandLine commandLine;
+
+  private static long session_id = 0;
 
   public static void main(String[] args) {
     commandLine = parseCmd(args);
@@ -69,7 +72,8 @@ public class Client {
             open = false;
             break;
           default:
-            println("Invalid statements!");
+            // println("Invalid statements!");
+            parseMsg(msg);
             break;
         }
         long endTime = System.currentTimeMillis();
@@ -80,6 +84,72 @@ public class Client {
       }
       transport.close();
     } catch (TTransportException e) {
+      logger.error(e.getMessage());
+    }
+  }
+
+  private static void parseMsg(String msg) {
+    String[] ms = msg.split(" ");
+    if (ms[0].equals("connect")) {
+      String username = ms[1];
+      String password = ms[2];
+      connect(username, password);
+    } else if (ms[0].equals("disconnect")) {
+      disconnect();
+    } else {
+      executeStatement(msg);
+    }
+  }
+
+  private static void connect(String username, String password) {
+    ConnectReq req = new ConnectReq(username, password);
+    try {
+      ConnectResp resp = client.connect(req);
+      Status s = resp.getStatus();
+      if (s.getCode() == Global.SUCCESS_CODE) {
+        session_id = resp.getSessionId();
+      } else {
+        println("Fail to connect");
+      }
+    } catch (TException e) {
+      logger.error(e.getMessage());
+    }
+  }
+
+  private static void disconnect() {
+    DisconnetReq req = new DisconnetReq(session_id);
+    try {
+      DisconnetResp resp = client.disconnect(req);
+      Status s = resp.getStatus();
+      if (s.getCode() == Global.SUCCESS_CODE) {
+        println("Success");
+      } else {
+        println("Fail to disconnect");
+      }
+    } catch (TException e) {
+      logger.error(e.getMessage());
+    }
+  }
+
+  private static void executeStatement(String statement) {
+    ExecuteStatementReq req = new ExecuteStatementReq(session_id, statement);
+    try {
+      ExecuteStatementResp resp = client.executeStatement(req);
+      Status s = resp.getStatus();
+      if (s.getCode() == Global.SUCCESS_CODE) {
+        if (resp.isIsAbort()) {
+          // TODO
+        } else {
+          if (resp.isHasResult()) {
+            // TODO show the result
+            List<String> columnsList = resp.getColumnsList();
+            List<List<String>> rowList = resp.getRowList();
+          }
+        }
+      } else {
+        println("Fail to execute");
+      }
+    } catch (TException e) {
       logger.error(e.getMessage());
     }
   }
