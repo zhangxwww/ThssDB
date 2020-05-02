@@ -105,9 +105,6 @@ public class Table implements Iterable<Row> {
   public void persist(PageFilePersist persistManager) {
     // TODO
     persistManager.flushTable(tableName);
-
-
-
   }
 
   ////   Take the rows to the buffer pool
