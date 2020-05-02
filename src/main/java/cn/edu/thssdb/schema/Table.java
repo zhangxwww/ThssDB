@@ -1,9 +1,11 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.index.BPlusTree;
+import cn.edu.thssdb.persist.PageFilePersist;
 import cn.edu.thssdb.query.QueryTable;
 import javafx.util.Pair;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Iterator;
@@ -16,6 +18,7 @@ public class Table implements Iterable<Row> {
   public ArrayList<Column> columns;
   public BPlusTree<Entry, Row> index;
   private int primaryIndex;
+
 
   public Table(String databaseName, String tableName, Column[] columns) {
     // TODO
@@ -30,6 +33,7 @@ public class Table implements Iterable<Row> {
         break;
       }
     }
+
   }
 
   public Table(String databaseName, String tableName, Column[] columns, String primaryName) {
@@ -95,16 +99,65 @@ public class Table implements Iterable<Row> {
     }
   }
 
-  private void serialize() {
+
+//   When this function is called, those dirty pages that related to this table
+//   will be flushed to corresponding position on disks.
+  public void persist(PageFilePersist persistManager) {
     // TODO
-    Iterator<Row> iter = iterator();
+    persistManager.flushTable(tableName);
+
+
 
   }
 
-  private ArrayList<Row> deserialize() {
+  ////   Take the rows to the buffer pool
+  //暂时是public 用于测试
+  public void serialize(PageFilePersist persistManager) {
     // TODO
-    return null;
+    try{
+      ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
+      ObjectOutputStream oos = new ObjectOutputStream(bOutStream);
+      Iterator<Row> iter = iterator();
+      while(iter.hasNext()){
+        Row r = iter.next();
+        oos.writeObject(r);
+      }
+      byte[] bData = bOutStream.toByteArray();
+      persistManager.storeTable(tableName,bData);
+
+    }catch (Exception e) {
+      e.printStackTrace();
+    }
+
+
   }
+  //暂时是public 用于测试
+  public ArrayList<Row> deserialize(PageFilePersist persistManager) {
+    // TODO
+    ArrayList<Row> rows = new ArrayList<Row>();
+    byte[] bData = persistManager.retrieveTable(tableName);
+    index = new BPlusTree<Entry, Row>();
+    try{
+      ByteArrayInputStream bInStream = new ByteArrayInputStream(bData);
+      ObjectInputStream ois = new ObjectInputStream(bInStream);
+      while(true){
+        Row o = (Row) ois.readObject();
+        rows.add(o);
+      }
+    }catch (EOFException e) {
+      System.out.println("类对象已完全读入");
+    }catch (Exception e) {
+      e.printStackTrace();
+    }
+    return rows;
+  }
+
+  public void printRowList(ArrayList<Row> rows){
+    for (Row r: rows){
+      System.out.println(r.toString());
+    }
+  }
+
 
   private class TableIterator implements Iterator<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
