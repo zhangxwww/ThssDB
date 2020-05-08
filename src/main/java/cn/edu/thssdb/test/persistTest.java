@@ -5,11 +5,9 @@ import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.persist.NaiveSerializationPersist;
 import cn.edu.thssdb.persist.PageFilePersist;
-import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Entry;
-import cn.edu.thssdb.schema.Row;
-import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Global;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -121,44 +119,44 @@ public class persistTest {
     //分页存储的测试1-验证可以保存记录到磁盘文件和从磁盘文件读回记录
     private static void test2(){
         try {
-            PageFilePersist persistManager;//暂时放在这里，理应属于一个database
-            persistManager = new PageFilePersist(20);//暂时放在这里，理应属于一个database
-
-            int nCol = 3;
-            int nRow = 100;
-            Row[] rows = new Row[nRow];
-            Entry[] entries = new Entry[nCol];
-            for (int i = 0; i < nRow; i++){
-                entries[0] = new Entry(i);
-                entries[1] = new Entry("a"+i);
-                entries[2] = new Entry("heng"+i);
-                rows[i] = new Row(entries);
-            }
-            Column[] cols = new Column[nCol];
-            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
-            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
-            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
-
-            Table testTable = new Table("Test","test",cols,"ID");
-//            for (Row r : rows){
-//                testTable.insert(r);
+//            PageFilePersist persistManager;//暂时放在这里，理应属于一个database
+//            persistManager = new PageFilePersist(20);//暂时放在这里，理应属于一个database
+//
+//            int nCol = 3;
+//            int nRow = 100;
+//            Row[] rows = new Row[nRow];
+//            Entry[] entries = new Entry[nCol];
+//            for (int i = 0; i < nRow; i++){
+//                entries[0] = new Entry(i);
+//                entries[1] = new Entry("a"+i);
+//                entries[2] = new Entry("heng"+i);
+//                rows[i] = new Row(entries);
 //            }
-            //下面两条用于persist.test2,理应从database信息里获取的，不是自己手写
-//            persistManager.tableFramesNum.put("test",0);
+//            Column[] cols = new Column[nCol];
+//            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
+//            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
+//            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
+//
+//            Table testTable = new Table("Test","test",cols,"ID");
+////            for (Row r : rows){
+////                testTable.insert(r);
+////            }
+//            //下面两条用于persist.test2,理应从database信息里获取的，不是自己手写
+////            persistManager.tableFramesNum.put("test",0);
+////            persistManager.tablePageMap.put("test",new ArrayList<>(0));
+////            testTable.serialize(persistManager);
+////            testTable.persist(persistManager);
+//            //到这一步就能看到文件下对应的test0-6文件
+//
+//            //把上面初始化table语句下开始注释掉，那么理应能从test0-6读回rows
+//            //下面这句用于理应从database信息里获取的，不是自己手写
+//            persistManager.tableFramesNum.put("test",7);
 //            persistManager.tablePageMap.put("test",new ArrayList<>(0));
-//            testTable.serialize(persistManager);
-//            testTable.persist(persistManager);
-            //到这一步就能看到文件下对应的test0-6文件
-
-            //把上面初始化table语句下开始注释掉，那么理应能从test0-6读回rows
-            //下面这句用于理应从database信息里获取的，不是自己手写
-            persistManager.tableFramesNum.put("test",7);
-            persistManager.tablePageMap.put("test",new ArrayList<>(0));
-            ArrayList<Row> recoverRows = testTable.deserialize(persistManager);
-            testTable.printRowList(recoverRows);
-            System.out.println(persistManager.tableFramesNum.get("test"));
-            System.out.println(persistManager.tablePageMap.get("test"));
-            //确实如此，读到100条记录
+//            ArrayList<Row> recoverRows = testTable.deserialize(persistManager);
+//            testTable.printRowList(recoverRows);
+//            System.out.println(persistManager.tableFramesNum.get("test"));
+//            System.out.println(persistManager.tablePageMap.get("test"));
+//            //确实如此，读到100条记录
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -168,61 +166,61 @@ public class persistTest {
     //分页存储的测试2-验证页面置换
     private static void test3(){
         try {
-            PageFilePersist persistManager;//暂时放在这里，理应属于一个database
-            persistManager = new PageFilePersist(10);//暂时放在这里，理应属于一个database
-
-            int nCol = 3;
-            Column[] cols = new Column[nCol];
-            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
-            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
-            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
-
-            Table testTable = new Table("Test","test",cols,"ID");
-            //下面这句用于理应从database信息里获取的，不是自己手写
-            persistManager.tableFramesNum.put("test",7);
-            persistManager.tablePageMap.put("test",new ArrayList<>(0));
-            persistManager.setTablePageMap();
-            ArrayList<Row> recoverRows = testTable.deserialize(persistManager);
-            //到这里，test的7页数据已经在bufferPool中了
-//            testTable.printRowList(recoverRows);
-//            System.out.println(persistManager.tableFramesNum.get("test"));
+//            PageFilePersist persistManager;//暂时放在这里，理应属于一个database
+//            persistManager = new PageFilePersist(10);//暂时放在这里，理应属于一个database
+//
+//            int nCol = 3;
+//            Column[] cols = new Column[nCol];
+//            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
+//            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
+//            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
+//
+//            Table testTable = new Table("Test","test",cols,"ID");
+//            //下面这句用于理应从database信息里获取的，不是自己手写
+//            persistManager.tableFramesNum.put("test",7);
+//            persistManager.tablePageMap.put("test",new ArrayList<>(0));
+//            persistManager.setTablePageMap();
+//            ArrayList<Row> recoverRows = testTable.deserialize(persistManager);
+//            //到这里，test的7页数据已经在bufferPool中了
+////            testTable.printRowList(recoverRows);
+////            System.out.println(persistManager.tableFramesNum.get("test"));
+////            System.out.println(persistManager.tablePageMap.get("test"));
+//
+//
+//            nCol = 3;
+//            int nRow = 100;
+//            Row[] rows = new Row[nRow];
+//            Entry[] entries = new Entry[nCol];
+//            for (int i = 0; i < nRow; i++){
+//                entries[0] = new Entry(i);
+//                entries[1] = new Entry("b"+i);
+//                entries[2] = new Entry("heng"+i);
+//                rows[i] = new Row(entries);
+//            }
+//            cols = new Column[nCol];
+//            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
+//            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
+//            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
+//
+//            Table testTable2 = new Table("Test","test2",cols,"ID");
+//            for (Row r : rows){
+//                testTable2.insert(r);
+//            }
+//            //下面两条用于persist.test2,理应从database信息里获取的，不是自己手写
+//            persistManager.tableFramesNum.put("test2",0);
+//            persistManager.tablePageMap.put("test2",new ArrayList<>(0));
+//            persistManager.setTablePageMap();
+//            testTable2.serialize(persistManager);
+//            System.out.println("test:"+persistManager.tableFramesNum.get("test"));
 //            System.out.println(persistManager.tablePageMap.get("test"));
-
-
-            nCol = 3;
-            int nRow = 100;
-            Row[] rows = new Row[nRow];
-            Entry[] entries = new Entry[nCol];
-            for (int i = 0; i < nRow; i++){
-                entries[0] = new Entry(i);
-                entries[1] = new Entry("b"+i);
-                entries[2] = new Entry("heng"+i);
-                rows[i] = new Row(entries);
-            }
-            cols = new Column[nCol];
-            cols[0] = new Column("ID",ColumnType.INT,1,true,4);
-            cols[1] = new Column("name",ColumnType.STRING,0,true,8);
-            cols[2] = new Column("sig",ColumnType.STRING,0,true,8);
-
-            Table testTable2 = new Table("Test","test2",cols,"ID");
-            for (Row r : rows){
-                testTable2.insert(r);
-            }
-            //下面两条用于persist.test2,理应从database信息里获取的，不是自己手写
-            persistManager.tableFramesNum.put("test2",0);
-            persistManager.tablePageMap.put("test2",new ArrayList<>(0));
-            persistManager.setTablePageMap();
-            testTable2.serialize(persistManager);
-            System.out.println("test:"+persistManager.tableFramesNum.get("test"));
-            System.out.println(persistManager.tablePageMap.get("test"));
-            System.out.println("test2:"+persistManager.tableFramesNum.get("test2"));
-            System.out.println(persistManager.tablePageMap.get("test2"));
-            //理应看到test表帧数7，bufferpool页面被置换出去4页，只有3页
-            //同时观察文件夹下被替换出去的frame对应的文件，修改时间已变。
-            //test2表帧数7，bufferpool中占7页
-
-            testTable2.persist(persistManager);
-            //到这一步就能看到文件下对应的test0-6文件
+//            System.out.println("test2:"+persistManager.tableFramesNum.get("test2"));
+//            System.out.println(persistManager.tablePageMap.get("test2"));
+//            //理应看到test表帧数7，bufferpool页面被置换出去4页，只有3页
+//            //同时观察文件夹下被替换出去的frame对应的文件，修改时间已变。
+//            //test2表帧数7，bufferpool中占7页
+//
+//            testTable2.persist(persistManager);
+//            //到这一步就能看到文件下对应的test0-6文件
 
 
 
@@ -233,8 +231,10 @@ public class persistTest {
     }
 
 
-    public static void main(String[] args) {
+
+    public static void main(String[] args) throws IOException {
 //        test3();
+
 
     }
 }

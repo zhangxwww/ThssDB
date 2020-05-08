@@ -4,6 +4,7 @@ import cn.edu.thssdb.pagefile.BufferManager;
 import cn.edu.thssdb.pagefile.DiskManager;
 
 import cn.edu.thssdb.pagefile.FrameDescription;
+import cn.edu.thssdb.utils.Global;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -18,38 +19,52 @@ public class PageFilePersist implements PersistenceOperation{
      */
     //之后有了database的基础，就可以改为private，用方法来赋值下面两个hash映射表
     public HashMap<String, Integer> tableFramesNum;
-    public HashMap<String, ArrayList<Integer>> tablePageMap;
     private BufferManager bfm;
+    private String databaseName;
 
     //理应还需要databse的一些信息：有哪些表，每个表有多少frame
-    public PageFilePersist(int numPages){
-        bfm = new BufferManager(numPages);
-        tableFramesNum = new HashMap<>();
-        tablePageMap = new HashMap<>();
+    public PageFilePersist(String dbName, int numPages, HashMap<String,Integer> tbFramesNum){
+        bfm = new BufferManager(dbName,numPages);
+        tableFramesNum = tbFramesNum;
+        for (String tbName: tbFramesNum.keySet()){
+            ArrayList<Integer> pageMap = new ArrayList<>(0);
+            bfm.tablePageMap.put(tbName,pageMap);
+        }
+        databaseName = dbName;
 
     }
 
 
-    public void setTablePageMap() {
-        bfm.setTablePageMap(tablePageMap);
+    public void addTable(String tbName) {
+        //数据库新增一张表时，也要在内存管理信息中更新信息。
+        //起初，新表所占frameNum=0，在内存中也没有占据页。
+        tableFramesNum.put(tbName,0);
+        bfm.tablePageMap.put(tbName,new ArrayList<>(0));
+    }
+
+    public void deleteTable(String tbName) {
+        //数据库新增一张表时，也要在内存管理信息中更新信息。
+        //起初，新表所占frameNum=0，在内存中也没有占据页。
+        tableFramesNum.put(tbName,0);
+        bfm.tablePageMap.put(tbName,new ArrayList<>(0));
     }
 
     //table record -> memory
     @Override
     public void storeTable(String tableName, byte[] data) {
 
-        if (!tablePageMap.containsKey(tableName)){
+        if (!tableFramesNum.containsKey(tableName)){
             throw new IllegalArgumentException("Try to store table "+tableName+" which is unexisted.");
         }
-        ArrayList<Integer> pagesInBufferPool = tablePageMap.get(tableName);
+        ArrayList<Integer> pagesInBufferPool = bfm.tablePageMap.get(tableName);
         ArrayList<Integer> pagesAllocated = new ArrayList<>();
 
         //调试信息
-        System.out.print(tableName+"原本占据的页为： ");
-        for (Integer integer : pagesInBufferPool) {
-            System.out.print(integer + " ");
-        }
-        System.out.println();
+//        System.out.print(tableName+"原本占据的页为： ");
+//        for (Integer integer : pagesInBufferPool) {
+//            System.out.print(integer + " ");
+//        }
+//        System.out.println();
 
 
         int pageNumNeeded = (int) Math.ceil((float)data.length / PageFileConst.PAGE_SIZE);
@@ -89,14 +104,14 @@ public class PageFilePersist implements PersistenceOperation{
             bfm.unpinPage(i);
         }
 
-        tablePageMap.replace(tableName,pagesAllocated);
+        bfm.tablePageMap.replace(tableName,pagesAllocated);
         tableFramesNum.replace(tableName,pagesAllocated.size());
         //调试信息
-        System.out.print(tableName+"新的占据的页为： ");
-        for (Integer integer : pagesAllocated) {
-            System.out.print(integer + " ");
-        }
-        System.out.println();
+//        System.out.print(tableName+"新的占据的页为： ");
+//        for (Integer integer : pagesAllocated) {
+//            System.out.print(integer + " ");
+//        }
+//        System.out.println();
     }
 
     //table record memory-> disc
@@ -115,7 +130,7 @@ public class PageFilePersist implements PersistenceOperation{
         int frameNum = tableFramesNum.get(tableName);
 
         byte[] data = new byte[PageFileConst.PAGE_SIZE * frameNum];
-        DiskManager dsm = new DiskManager(tableName);
+        DiskManager dsm = new DiskManager(Global.ROOT_PATH+databaseName+"/"+tableName);
         for (int i = 0; i < frameNum; i++){
             byte[] dataTmp = dsm.readPage(i);
             for (int j = 0; j < PageFileConst.PAGE_SIZE; j++){
@@ -135,7 +150,8 @@ public class PageFilePersist implements PersistenceOperation{
         for(Integer i: pagesId){
             bfm.unpinPage(i);
         }
-        tablePageMap.put(tableName,pagesId);
+        bfm.tablePageMap.put(tableName,pagesId);
+
         return data;
     }
 }

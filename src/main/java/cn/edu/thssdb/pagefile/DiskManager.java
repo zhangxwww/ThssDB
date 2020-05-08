@@ -41,6 +41,7 @@ public class DiskManager implements PageFileConst {
                 outputStream.write(flush, 0, len);
             }
             outputStream.flush();
+            outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }

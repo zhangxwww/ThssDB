@@ -2,6 +2,7 @@ package cn.edu.thssdb.pagefile;
 
 import cn.edu.thssdb.pagefile.FrameDescription;
 import cn.edu.thssdb.pagefile.Page;
+import cn.edu.thssdb.utils.Global;
 
 import java.awt.*;
 import java.util.ArrayList;
@@ -15,9 +16,10 @@ public class BufferManager implements PageFileConst {
     protected FrameDescription[] frameTab;
     protected HashMap<Integer, FrameDescription> pageMap;
     protected Replacer replacer;
-    protected HashMap<String, ArrayList<Integer>> tablePageMap;//记录了每张表有哪些页在buffer pool里
+    public HashMap<String, ArrayList<Integer>> tablePageMap;//记录了每张表有哪些页在buffer pool里
+    private String databaseName;
 
-    public BufferManager(int numPages) {
+    public BufferManager(String dbName, int numPages) {
         bufferPool = new Page[numPages];
         frameTab = new FrameDescription[numPages];
         for (int i = 0; i < numPages; i++) {
@@ -26,11 +28,10 @@ public class BufferManager implements PageFileConst {
         }
         pageMap = new HashMap<Integer, FrameDescription>(numPages);
         replacer = new Replacer(numPages);
+        databaseName = dbName;
+        tablePageMap = new HashMap<>(0);
     }
 
-    public void setTablePageMap(HashMap<String, ArrayList<Integer>> mTablePageMap) {
-        tablePageMap = mTablePageMap;
-    }
 
 
 
@@ -42,7 +43,7 @@ public class BufferManager implements PageFileConst {
     //this method doesn't include data write or read
     //it just tell the caller which pages can be used
     public ArrayList<Integer> allocatePages(int neededNum) {
-        System.out.println("Begin to allocate Pages.");
+//        System.out.println("Begin to allocate Pages.");
         ArrayList<Integer> pagesIdAllocated = new ArrayList<>();
         //First,find the free pages that haven't been allocated to a table
         int curNum = 0;
@@ -69,8 +70,8 @@ public class BufferManager implements PageFileConst {
                 e.printStackTrace();
             }
         }
-        System.out.print("Finished. AllocatePages:");
-        printList(pagesIdAllocated);
+//        System.out.print("Finished. AllocatePages:");
+//        printList(pagesIdAllocated);
 
         return pagesIdAllocated;
     }
@@ -168,7 +169,7 @@ public class BufferManager implements PageFileConst {
         }
     }
     public void flushTable(String tableName){
-        DiskManager discM = new DiskManager(tableName);
+        DiskManager discM = new DiskManager(Global.ROOT_PATH+databaseName+"/"+tableName);
         for (int i = 0; i < bufferPool.length; i++){
             if(frameTab[i].isPinned()){
 //                throw new IllegalStateException("In BufferManager.flushPage.");

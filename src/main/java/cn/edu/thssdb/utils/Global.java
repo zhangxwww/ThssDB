@@ -19,4 +19,8 @@ public class Global {
   // public static final String CONNECT = "connect"
 
   public static final String S_URL_INTERNAL = "jdbc:default:connection";
+
+  public static final String ROOT_PATH = "./data/";
+
+  public static final int BUFFER_POOL_PAGE_NUM = 20;
 }

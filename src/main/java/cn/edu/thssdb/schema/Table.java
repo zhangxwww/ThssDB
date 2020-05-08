@@ -17,7 +17,7 @@ public class Table implements Iterable<Row> {
   public String tableName;
   public ArrayList<Column> columns;
   public BPlusTree<Entry, Row> index;
-  private int primaryIndex;
+  public int primaryIndex;
 
 
   public Table(String databaseName, String tableName, Column[] columns) {
@@ -61,7 +61,17 @@ public class Table implements Iterable<Row> {
     this.primaryIndex = primaryIndex;
   }
 
-  private void recover() {
+  public void recover(PageFilePersist persistManager) {
+    // TODO
+    //从磁盘中反序列化得到纪录
+    ArrayList<Row> rows = deserialize(persistManager);
+    for (Row row : rows){
+      Entry e = row.getEntries().get(primaryIndex);
+      index.put(e, row);
+    }
+  }
+
+  public void recover() {
     // TODO
   }
 
@@ -105,10 +115,10 @@ public class Table implements Iterable<Row> {
   public void persist(PageFilePersist persistManager) {
     // TODO
     persistManager.flushTable(tableName);
+
   }
 
   ////   Take the rows to the buffer pool
-  //暂时是public 用于测试
   public void serialize(PageFilePersist persistManager) {
     // TODO
     try{
@@ -128,8 +138,8 @@ public class Table implements Iterable<Row> {
 
 
   }
-  //暂时是public 用于测试
-  public ArrayList<Row> deserialize(PageFilePersist persistManager) {
+
+  private ArrayList<Row> deserialize(PageFilePersist persistManager) {
     // TODO
     ArrayList<Row> rows = new ArrayList<Row>();
     byte[] bData = persistManager.retrieveTable(tableName);
@@ -142,19 +152,20 @@ public class Table implements Iterable<Row> {
         rows.add(o);
       }
     }catch (EOFException e) {
-      System.out.println("类对象已完全读入");
+      System.out.println("table deserialize中类对象已完全读入");
     }catch (Exception e) {
       e.printStackTrace();
     }
     return rows;
   }
 
-  public void printRowList(ArrayList<Row> rows){
-    for (Row r: rows){
+  public void printBPlusTree(){
+    Iterator<Row> iter = iterator();
+    while(iter.hasNext()){
+      Row r = iter.next();
       System.out.println(r.toString());
     }
   }
-
 
   private class TableIterator implements Iterator<Row> {
     private Iterator<Pair<Entry, Row>> iterator;
