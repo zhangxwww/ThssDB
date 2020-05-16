@@ -4,9 +4,10 @@ import cn.edu.thssdb.schema.Row;
 import java.util.Iterator;
 
 public class QueryTable implements Iterator<Row> {
-
-  QueryTable() {
+  AttrCompare attrCompare;
+  QueryTable(AttrCompare attrCompare) {
     // TODO
+    this.attrCompare = attrCompare;
   }
 
   @Override
