@@ -63,7 +63,7 @@ public class Database {
     //根据tables和psm来set一下tableInfos
     tableInfos.clear();
     try{
-      ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH+name+"/manage",true));
+      ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH+name+"/manage",false));
       HashMap<String, Integer> tableFramesNum = persistManager.tableFramesNum;
       for(Table t:tables.values()){
         int frameNum = tableFramesNum.get(t.tableName);
