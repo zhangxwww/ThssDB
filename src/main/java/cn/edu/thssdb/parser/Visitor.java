@@ -126,12 +126,11 @@ public class Visitor extends SQLBaseVisitor {
                 tableName = tableNameContext.getText();
             }
             String attrName = c.column_name().getText();
-            results.set(i, new Pair<String, String>(tableName, attrName));
+            results.set(i, new Pair<>(tableName, attrName));
         }
 
         // from clause
         List<SQLParser.Table_queryContext> tables = ctx.table_query();
-        boolean hasJoin = false;
         JoinCondition joinCondition = null;
         String table1 = "";
         String table2 = "";
@@ -142,13 +141,19 @@ public class Visitor extends SQLBaseVisitor {
             // TODO: Exception Handle
             table1 = tables.get(0).table_name().toString();
             table2 = tables.get(1).table_name().toString();
-            hasJoin = true;
-            joinCondition = (JoinCondition) visitMultiple_condition(tables.get(2).multiple_condition());
+            SQLParser.Multiple_conditionContext joinConditionContext = tables.get(2).multiple_condition();
+            if (joinConditionContext != null) {
+                joinCondition = (JoinCondition) visitMultiple_condition(joinConditionContext);
+            }
         }
 
         // where clause
-        WhereCondition whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
-//        statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
+        WhereCondition whereCondition = null;
+        SQLParser.Multiple_conditionContext whereConditionContext = ctx.multiple_condition();
+        if (whereConditionContext != null) {
+            whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
+        }
+        statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
         return null;
     }
 
@@ -185,8 +190,5 @@ public class Visitor extends SQLBaseVisitor {
             return new JoinCondition(operator, tableName1, tableName2, columnName1, columnName2);
         }
     }
-
-
-
 }
 
