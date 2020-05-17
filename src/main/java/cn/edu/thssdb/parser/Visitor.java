@@ -1,7 +1,10 @@
 package cn.edu.thssdb.parser;
 
+import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.query.JoinCondition;
+import cn.edu.thssdb.query.WhereCondition;
 import cn.edu.thssdb.schema.Column;
+import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.type.ColumnType;
@@ -71,6 +74,7 @@ public class Visitor extends SQLBaseVisitor {
         // from clause
         List<SQLParser.Table_queryContext> tables = ctx.table_query();
         boolean hasJoin = false;
+        JoinCondition joinCondition = null;
         String table1 = "";
         String table2 = "";
         int numTables = tables.size();
@@ -81,13 +85,46 @@ public class Visitor extends SQLBaseVisitor {
             table1 = tables.get(0).table_name().toString();
             table2 = tables.get(1).table_name().toString();
             hasJoin = true;
-            JoinCondition joinCondition = (JoinCondition) visitMultiple_condition(tables.get(2).multiple_condition());
+            joinCondition = (JoinCondition) visitMultiple_condition(tables.get(2).multiple_condition());
         }
+
+        // where clause
+        WhereCondition whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
+        statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
         return null;
     }
 
     @Override
-    public Object visitMultiple_condition(SQLParser.Multiple_conditionContext ctx) {
-        return null;
+    public Condition visitCondition(SQLParser.ConditionContext ctx) {
+        SQLParser.ExpressionContext exp1 = ctx.expression(0);
+        SQLParser.ExpressionContext exp2 = ctx.expression(1);
+
+        // Comparator
+        String operator = ctx.comparator().getText();
+
+        // First Comparer
+        SQLParser.Column_full_nameContext attrContext1 =  exp1.comparer().column_full_name();
+        String tableName1 = "";
+        if (attrContext1.table_name() != null) {
+            tableName1 = attrContext1.table_name().getText();
+        }
+        String columnName1 = attrContext1.column_name().getText();
+
+        // Second Comparer
+        SQLParser.Literal_valueContext literal = exp2.comparer().literal_value();
+        if (literal != null) {
+            // where condition
+            String value = literal.getText();
+            return new WhereCondition(operator, tableName1, columnName1, value);
+        } else {
+            // join condition
+            SQLParser.Column_full_nameContext attrContext2 =  exp1.comparer().column_full_name();
+            String tableName2 = "";
+            if (attrContext1.table_name() != null) {
+                tableName2 = attrContext1.table_name().getText();
+            }
+            String columnName2 = attrContext1.column_name().getText();
+            return new JoinCondition(operator, tableName1, tableName2, columnName1, columnName2);
+        }
     }
 }
