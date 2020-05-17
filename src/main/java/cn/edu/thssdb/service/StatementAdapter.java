@@ -154,18 +154,22 @@ public class StatementAdapter {
         boolean needJoin;
         int jIndex1 = -1, jIndex2 = -1;
         if (table2 == null || table2.equals("") || jc == null) {
+            // 不需要join
             q = new QueryTable[]{getQueryTable(table1, wc)};
             needJoin = false;
         } else {
+            // 检查where中是否存在歧义
             if (!checkAmbiguousColumnForWhere(table1, table2, wc)) {
                 // TODO throw error: ambiguous column in where condition
             }
             q = new QueryTable[]{getQueryTable(table1, wc), getQueryTable(table2, wc)};
+            // 哪两列被join
             List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
             jIndex1 = joinIndex.get(0);
             jIndex2 = joinIndex.get(1);
             needJoin = true;
         }
+        // select哪些列
         List<Integer> index = getSelectIndex(results, table1, table2);
         List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2).query();
         return generateTmpTable(qResult, table1, table2, index);
