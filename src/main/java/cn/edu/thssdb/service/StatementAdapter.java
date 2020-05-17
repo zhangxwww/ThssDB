@@ -1,20 +1,18 @@
 package cn.edu.thssdb.service;
 
-import cn.edu.thssdb.query.AttrCompare;
-import cn.edu.thssdb.query.JoinCondition;
-import cn.edu.thssdb.query.WhereCondition;
+import cn.edu.thssdb.query.*;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
 import javafx.util.Pair;
 
+import java.lang.reflect.Array;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
-import cn.edu.thssdb.schema.*;
-import javafx.util.Pair;
 
-import java.util.List;
-import java.util.Map;
+import cn.edu.thssdb.schema.*;
 
 public class StatementAdapter {
 
@@ -41,7 +39,7 @@ public class StatementAdapter {
         return t.getColumns().size();
     }
 
-    public void insertTableRow(String tbName, String[] entries){
+    public void insertTableRow(String tbName, String[] entries) {
         //插入整行
         int attrsNum = tableAttrsNum(tbName);
         if (entries.length != attrsNum) {
@@ -51,33 +49,33 @@ public class StatementAdapter {
         } else {
             //TODO 插入整行
         }
-        return ;
+        return;
     }
 
-    public void insertTableRow(String tbName, String[] attrNames, String[] attrValues){
+    public void insertTableRow(String tbName, String[] attrNames, String[] attrValues) {
         //value的个数要与colomn个数一致
         if (attrNames.length != attrValues.length) {
             //TODO 异常处理 所给长度不一致
             return;
         } else {
-            String primaryKeyName =getTablePrimaryAttr(tbName);
+            String primaryKeyName = getTablePrimaryAttr(tbName);
             boolean hasPrimaryKey = false;
             for (int j = 0; j < attrNames.length; j++) {
-                if (attrNames[j].equals(primaryKeyName)){
+                if (attrNames[j].equals(primaryKeyName)) {
                     hasPrimaryKey = true;
                 }
             }
-            if (hasPrimaryKey){
+            if (hasPrimaryKey) {
 
-            }else{
+            } else {
                 //TODO 异常处理 插入的属性中没有主键
                 return;
             }
         }
-        return ;
+        return;
     }
 
-    public void delFromTable(String tbName, WhereCondition wherecond){
+    public void delFromTable(String tbName, WhereCondition wherecond) {
         return;
     }
 
@@ -90,33 +88,233 @@ public class StatementAdapter {
     }
 
 
-
     public Table select(List<Pair<String, String>> results, String table1, String table2, JoinCondition jc, WhereCondition wc) {
         // TODO
+        QueryTable[] q;
+        boolean needJoin;
+        int jIndex1 = -1, jIndex2 = -1;
         if (table2 == null || table2.equals("") || jc == null) {
-            return selectWithoutJoin(results, table1, wc);
+            q = new QueryTable[]{getQueryTable(table1, wc)};
+            needJoin = false;
+        } else {
+            if (!checkAmbiguousColumnForWhere(table1, table2, wc)) {
+                // TODO throw error: ambiguous column in where condition
+            }
+            q = new QueryTable[]{getQueryTable(table1, wc), getQueryTable(table2, wc)};
+            List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
+            jIndex1 = joinIndex.get(0);
+            jIndex2 = joinIndex.get(1);
+            needJoin = true;
         }
-        return null;
+        List<Integer> index = getSelectIndex(results, table1, table2);
+        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2).query();
+        return generateTmpTable(qResult, table1, table2, index);
     }
 
-    private Table selectWithoutJoin(List<Pair<String, String>> results, String table, WhereCondition wc) {
-        AttrCompare compare = new AttrCompare(wc.op);
+    private QueryTable getQueryTable(String table, WhereCondition wc) {
+        QueryTable q;
         Table t = dbTEST.getTable(table);
-        String attr = wc.attr;
-        ColumnType cType = null;
-        for (Column c : t.getColumns()) {
-            if (c.getName().equals(attr)){
-                cType = c.getType();
-                break;
+        if (wc != null && (wc.tableName.equals(table) || wc.tableName.equals(""))) {
+            AttrCompare compare = new AttrCompare(wc.op);
+            String attr = wc.attr;
+            ColumnType cType = null;
+            for (Column c : t.getColumns()) {
+                if (c.getName().equals(attr)) {
+                    cType = c.getType();
+                    break;
+                }
+                // TODO throw error: attr not in columns
             }
-            // TODO throw error: attr not in columns
+            String value = wc.val;
+            Entry instant = parseValue(cType, value);
+            q = new QueryTable(compare, t, attr, instant);
+        } else {
+            q = new QueryTable(null, t, null, null);
         }
+        return q;
+    }
+
+
+    private Entry parseValue(ColumnType type, String value) {
         Entry instant;
-        String value = wc.val;
-        switch (cType) {
+        switch (type) {
             case INT:
                 instant = new Entry(Integer.parseInt(value));
                 break;
+            case LONG:
+                instant = new Entry(Long.parseLong(value));
+                break;
+            case FLOAT:
+                instant = new Entry(Float.parseFloat(value));
+                break;
+            case DOUBLE:
+                instant = new Entry(Double.parseDouble(value));
+                break;
+            case STRING:
+            default:
+                instant = new Entry(value);
+                break;
         }
+        return instant;
+    }
+
+    private List<Integer> getSelectIndex(List<Pair<String, String>> res, String t1, String t2) {
+        List<Integer> results = new ArrayList<>();
+        List<String> attrs = new ArrayList<>();
+        int midIndex = mergeAttrs(t1, t2, attrs);
+        for (Pair<String, String> p : res) {
+            String tbName = p.getKey();
+            String attrName = p.getValue();
+            int index = 0;
+            if (tbName.equals("")) {
+                int first = attrs.indexOf(attrName);
+                int last = attrs.lastIndexOf(attrName);
+                if (first != last) {
+                    // TODO throw error: ambiguous column name
+                } else if (first < 0) {
+                    // TODO throw error: column not exists
+                } else {
+                    index = first;
+                }
+            } else {
+                if (tbName.equals(t1)) {
+                    int tmp = attrs.indexOf(attrName);
+                    if (tmp >= midIndex) {
+                        // TODO throw error: attrName not exists in table
+                    } else {
+                        index = tmp;
+                    }
+                } else if (tbName.equals(t2)) {
+                    int tmp = attrs.lastIndexOf(attrName);
+                    if (tmp < midIndex) {
+                        // TODO throw error: attrName not exists in table
+                    } else {
+                        index = tmp;
+                    }
+                } else {
+                    // TODO throw error: table not exists
+                }
+            }
+            results.add(index);
+        }
+        return results;
+    }
+
+    private List<Integer> getJoinIndex(String t1, String t2, JoinCondition jc) {
+        List<Integer> results = new ArrayList<>();
+        List<String> attrs = new ArrayList<>();
+        int midIndex = mergeAttrs(t1, t2, attrs);
+        ArrayList<Column> c1 = dbTEST.getTable(t1).getColumns();
+        ArrayList<Column> c2 = dbTEST.getTable(t2).getColumns();
+        if (jc.table1.equals(t1) && jc.table2.equals(t2)) {
+            for (int i = 0; i < c1.size(); ++i) {
+                if (c1.get(i).getName().equals(jc.attr1)) {
+                    results.set(0, i);
+                    break;
+                }
+                // TODO throw error: attr not in table
+            }
+            for (int i = 0; i < c2.size(); ++i) {
+                if (c2.get(i).getName().equals(jc.attr2)) {
+                    results.set(1, i + midIndex);
+                    break;
+                }
+                // TODO throw error: attr not in table
+            }
+        } else if (jc.table1.equals(t2) && jc.table2.equals(t1)) {
+            for (int i = 0; i < c1.size(); ++i) {
+                if (c1.get(i).getName().equals(jc.attr2)) {
+                    results.set(0, i);
+                    break;
+                }
+                // TODO throw error: attr not in table
+            }
+            for (int i = 0; i < c2.size(); ++i) {
+                if (c2.get(i).getName().equals(jc.attr1)) {
+                    results.set(1, i + midIndex);
+                    break;
+                }
+                // TODO throw error: attr not in table
+            }
+        } else {
+            // TODO throw error: table name can't match
+        }
+        return results;
+    }
+
+    private boolean checkAmbiguousColumnForWhere(String t1, String t2, WhereCondition wc) {
+        if (wc == null) {
+            return true;
+        }
+        if (wc.tableName.equals(t1) || wc.tableName.equals(t2)) {
+            return true;
+        }
+        if (wc.tableName.equals("")) {
+            Table table1 = dbTEST.getTable(t1);
+            Table table2 = dbTEST.getTable(t2);
+            boolean found = false;
+            for (Column c : table1.getColumns()) {
+                if (c.getName().equals(wc.attr)) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                return true;
+            }
+            for (Column c : table2.getColumns()) {
+                if (c.getName().equals(wc.attr)) {
+                    return false;
+                }
+            }
+            return true;
+        }
+        return false;
+    }
+
+    private Table generateTmpTable(List<Row> rows, String t1, String t2, List<Integer> index) {
+        List<Column> newColumn = new ArrayList<>();
+        List<String> attrs = new ArrayList<>();
+        int midIndex = mergeAttrs(t1, t2, attrs);
+        Table table1, table2;
+        List<Column> c1 = new ArrayList<>();
+        List<Column> c2 = new ArrayList<>();
+        table1 = dbTEST.getTable(t1);
+        c1 = table1.getColumns();
+        if (t2 != null && !t2.equals("")) {
+            table2 = dbTEST.getTable(t2);
+            c2 = table2.getColumns();
+        }
+        for (int i : index) {
+            if (i < midIndex) {
+                newColumn.add(new Column(c1.get(i)));
+            } else {
+                newColumn.add(new Column(c2.get(i - midIndex)));
+            }
+        }
+        Table tmpTable = new Table("", "__TEMP", (Column[]) newColumn.toArray(), table1.primaryIndex);
+        for (Row r : rows) {
+            tmpTable.insert(r);
+        }
+        return tmpTable;
+    }
+
+    private int mergeAttrs(String t1, String t2, List<String> mergedAttrs) {
+        Table table1, table2;
+        int midIndex = 0;
+        if (t1 != null && !t1.equals("")) {
+            table1 = dbTEST.getTable(t1);
+            midIndex = tableAttrsNum(t1);
+            for (Column c : table1.getColumns()) {
+                mergedAttrs.add(c.getName());
+            }
+        }
+        if (t2 != null && !t2.equals("")) {
+            table2 = dbTEST.getTable(t2);
+            for (Column c : table2.getColumns()) {
+                mergedAttrs.add(c.getName());
+            }
+        }
+        return midIndex;
     }
 }

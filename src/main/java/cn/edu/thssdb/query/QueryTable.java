@@ -37,18 +37,20 @@ public class QueryTable implements Iterator<Row> {
         this.needWhere = true;
     }
 
-    QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
+    public QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
         needWhere = attrCompare != null;
-        this.attrCompare = attrCompare;
-        List<Column> columns = table.getColumns();
-        int numColumns = columns.size();
-        for (int i = 0; i < numColumns; i++) {
-            Column c = columns.get(i);
-            if (c.getName().equals(attr)) {
-                this.index1 = i;
+        if (needWhere) {
+            this.attrCompare = attrCompare;
+            List<Column> columns = table.getColumns();
+            int numColumns = columns.size();
+            for (int i = 0; i < numColumns; i++) {
+                Column c = columns.get(i);
+                if (c.getName().equals(attr)) {
+                    this.index1 = i;
+                }
             }
+            this.instant = instant;
         }
-        this.instant = instant;
         this.isAttrInstCmp = true;
     }
 
