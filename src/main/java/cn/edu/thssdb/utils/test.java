@@ -20,7 +20,7 @@ import java.util.*;
 public class test {
     public static void main(String[] args) {
 
-        String len = "UPDATE studente SET name = wkl  WHERE  name = myq";
+        String len = "insert into student(name) VALUES ('bob',15)";
         CharStream input = CharStreams.fromString(len);
         SQLLexer lexer = new SQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);

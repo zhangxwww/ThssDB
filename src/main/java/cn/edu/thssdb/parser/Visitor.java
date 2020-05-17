@@ -148,7 +148,7 @@ public class Visitor extends SQLBaseVisitor {
 
         // where clause
         WhereCondition whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
-        statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
+//        statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
         return null;
     }
 
