@@ -20,7 +20,7 @@ import java.util.*;
 public class test {
     public static void main(String[] args) {
 
-        String len = "CREATE TABLE person (name String(256), ID Int not null, PRIMARY KEY(ID))";
+        String len = "INSERT INTO person(id,AGE,NAME) VALUES (32,15,'Bob')";
         CharStream input = CharStreams.fromString(len);
         SQLLexer lexer = new SQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
