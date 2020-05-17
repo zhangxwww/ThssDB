@@ -20,6 +20,7 @@ public class QueryResult {
     private boolean needJoin = false;
     // join on 哪些列
     private int joinIndex1, joinIndex2;
+    private QueryTable[] queryTables;
 
     public QueryResult(QueryTable[] queryTables, List<Integer> index, boolean needJoin, int joinIndex1, int joinIndex2) {
         // TODO
@@ -28,6 +29,32 @@ public class QueryResult {
         this.joinIndex1 = joinIndex1;
         this.joinIndex2 = joinIndex2;
         this.attrs = new ArrayList<>();
+        this.queryTables = queryTables;
+    }
+
+    public List<Row> query() {
+        List<Row> result;
+        if (needJoin) {
+            List<List<Row>> rowLists = new ArrayList<>();
+            rowLists.add(new ArrayList<>());
+            rowLists.add(new ArrayList<>());
+            for (int i = 0; i < 2; ++i) {
+                while (queryTables[i].hasNext()) {
+                    rowLists.get(i).add(queryTables[i].next());
+                }
+            }
+            result = join(rowLists.get(0), rowLists.get(1));
+        } else {
+            result = new ArrayList<>();
+            while (queryTables[0].hasNext()) {
+                result.add(queryTables[0].next());
+            }
+        }
+        List<Row> finalRes = new ArrayList<>();
+        for (Row r : result) {
+            finalRes.add(generateQueryRecord(r));
+        }
+        return finalRes;
     }
 
     public List<Row> join(List<Row> r1, List<Row> r2) {

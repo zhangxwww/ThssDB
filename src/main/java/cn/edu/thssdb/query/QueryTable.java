@@ -13,6 +13,7 @@ public class QueryTable implements Iterator<Row> {
     private AttrCompare attrCompare;
     private Iterator<Row> iterator;
     private boolean isAttrInstCmp;
+    private boolean needWhere;
     private int index1 = -1;
     private int index2 = -1;
     private Entry instant;
@@ -33,9 +34,11 @@ public class QueryTable implements Iterator<Row> {
             }
         }
         this.isAttrInstCmp = false;
+        this.needWhere = true;
     }
 
     QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
+        needWhere = attrCompare != null;
         this.attrCompare = attrCompare;
         List<Column> columns = table.getColumns();
         int numColumns = columns.size();
@@ -53,6 +56,10 @@ public class QueryTable implements Iterator<Row> {
     public boolean hasNext() {
         while (this.iterator.hasNext()) {
             Row next = this.iterator.next();
+            if (!needWhere) {
+                this.nextRow = next;
+                return true;
+            }
             Entry entry1 = next.getEntries().get(this.index1);
             Entry entry2 = instant;
             if (!this.isAttrInstCmp) {
