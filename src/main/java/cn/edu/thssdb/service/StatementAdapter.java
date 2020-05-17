@@ -1,5 +1,6 @@
 package cn.edu.thssdb.service;
 
+import cn.edu.thssdb.exception.WrongInsertArgumentNumException;
 import cn.edu.thssdb.query.AttrCompare;
 import cn.edu.thssdb.query.JoinCondition;
 import cn.edu.thssdb.query.WhereCondition;
@@ -9,6 +10,7 @@ import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
 import javafx.util.Pair;
 
+import java.util.ArrayList;
 import java.util.List;
 import cn.edu.thssdb.schema.*;
 import javafx.util.Pair;
@@ -41,17 +43,42 @@ public class StatementAdapter {
         return t.getColumns().size();
     }
 
-    public void insertTableRow(String tbName, String[] entries){
+    public void insertTableRow(String tbName, String[] attrValues){
         //插入整行
         int attrsNum = tableAttrsNum(tbName);
-        if (entries.length != attrsNum) {
+        if (attrValues.length != attrsNum) {
             //TODO 异常处理 所给values个数不对
             System.out.println("Insert Failure! valueEntries.size()! = attrsNum");
             return;
         } else {
             //TODO 插入整行
-
-
+            Table t = dbTEST.getTable(tbName);
+            ArrayList<Column> attrs = t.getColumns();
+            Entry[] entries = new Entry[attrsNum];
+            for (int i = 0; i < attrs.size(); i++){
+                Column tmpAttr = attrs.get(i);
+                ColumnType attrType = tmpAttr.getType();
+                Entry e = null;
+                switch (attrType){
+                    case INT:
+                        e = new Entry(Integer.parseInt(attrValues[i]));
+                        break;
+                    case LONG:
+                        e = new Entry(Long.parseLong(attrValues[i]));
+                        break;
+                    case FLOAT:
+                        e = new Entry(Float.parseFloat(attrValues[i]));
+                        break;
+                    case DOUBLE:
+                        e = new Entry(Double.parseDouble(attrValues[i]));
+                        break;
+                    case STRING:
+                        e = new Entry(attrValues[i]);
+                        break;
+                }
+                entries[i] = e;
+            }
+            t.insert(new Row(entries));
         }
         return ;
     }
@@ -60,7 +87,7 @@ public class StatementAdapter {
         //value的个数要与colomn个数一致
         if (attrNames.length != attrValues.length) {
             //TODO 异常处理 所给长度不一致
-            return;
+            throw new WrongInsertArgumentNumException();
         } else {
             String primaryKeyName =getTablePrimaryAttr(tbName);
             boolean hasPrimaryKey = false;
@@ -69,12 +96,44 @@ public class StatementAdapter {
                     hasPrimaryKey = true;
                 }
             }
-            if (hasPrimaryKey){
-
-            }else{
+            if (!hasPrimaryKey){
                 //TODO 异常处理 插入的属性中没有主键
                 return;
             }
+
+            //插入一条Row
+            Table t = dbTEST.getTable(tbName);
+            ArrayList<Column> attrs = t.getColumns();
+            Entry[] entries = new Entry[attrs.size()];
+            for (int i = 0; i < attrs.size(); i++){
+                Column tmpAttr = attrs.get(i);
+                Entry e = null;
+                for(int j = 0; j < attrNames.length; j++){
+                    if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())){
+                        ColumnType attrType = tmpAttr.getType();
+                        switch (attrType){
+                            case INT:
+                                e = new Entry(Integer.parseInt(attrValues[j]));
+                                break;
+                            case LONG:
+                                e = new Entry(Long.parseLong(attrValues[j]));
+                                break;
+                            case FLOAT:
+                                e = new Entry(Float.parseFloat(attrValues[j]));
+                                break;
+                            case DOUBLE:
+                                e = new Entry(Double.parseDouble(attrValues[j]));
+                                break;
+                            case STRING:
+                                e = new Entry(attrValues[j]);
+                                break;
+                        }
+                        break;
+                    }//为给出的属性值就为null
+                }
+                entries[i] = e;
+            }
+            t.insert(new Row(entries));
         }
         return ;
     }
@@ -121,5 +180,6 @@ public class StatementAdapter {
                 instant = new Entry(Integer.parseInt(value));
                 break;
         }
+        return null;
     }
 }
