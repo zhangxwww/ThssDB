@@ -32,6 +32,8 @@ public class StatementAdapter {
             return;
         } else {
             //TODO 插入整行
+
+
         }
         return ;
     }
@@ -60,6 +62,7 @@ public class StatementAdapter {
     }
 
     public void delFromTable(String tbName, WhereCondition wherecond){
+        //whereCondition可能为空
         return;
     }
 
