@@ -67,7 +67,7 @@ public class Database {
       HashMap<String, Integer> tableFramesNum = persistManager.tableFramesNum;
       for(Table t:tables.values()){
         int frameNum = tableFramesNum.get(t.tableName);
-        tableInfo tbInfo = new tableInfo(name,t.tableName,t.columns,t.primaryIndex,frameNum);
+        tableInfo tbInfo = new tableInfo(name,t.tableName,t.getColumns(),t.primaryIndex,frameNum);
         objectOutputStream.writeObject(tbInfo);
         tableInfos.add(tbInfo);
       }
@@ -146,7 +146,7 @@ public class Database {
 
   public String select(QueryTable[] queryTables) {
     // TODO
-    QueryResult queryResult = new QueryResult(queryTables);
+//    QueryResult queryResult = new QueryResult(queryTables);
     return null;
   }
 
