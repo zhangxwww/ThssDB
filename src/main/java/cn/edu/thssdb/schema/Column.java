@@ -1,8 +1,10 @@
 package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.type.ColumnType;
+import com.sun.javafx.logging.PulseLogger;
 
 import java.io.Serializable;
+import java.security.PublicKey;
 
 public class Column implements Comparable<Column>, Serializable {
   private String name;
@@ -25,6 +27,10 @@ public class Column implements Comparable<Column>, Serializable {
 
   public String getName() {
     return name;
+  }
+
+  public ColumnType getType() {
+    return type;
   }
 
   @Override
