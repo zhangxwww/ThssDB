@@ -4,13 +4,9 @@ import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.query.JoinCondition;
 import cn.edu.thssdb.query.WhereCondition;
 import cn.edu.thssdb.schema.Column;
-import cn.edu.thssdb.schema.Entry;
-import cn.edu.thssdb.schema.Row;
-import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.type.ColumnType;
 import javafx.util.Pair;
-import jdk.nashorn.internal.ir.TernaryNode;
 import org.antlr.v4.runtime.tree.TerminalNode;
 
 import java.util.ArrayList;
@@ -64,60 +60,58 @@ public class Visitor extends SQLBaseVisitor {
 
     @Override
     public Object visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
-        //如果没有colomn name, 说明是插入整行，所以需要获取表的colomns信息
+        //如果没有column name, 说明是插入整行，所以需要获取表的columns信息
         String tableName = ctx.table_name().getText();
         List<SQLParser.Column_nameContext> colNames = ctx.column_name();
         List<SQLParser.Literal_valueContext> values = ctx.value_entry(0).literal_value();
-        Entry[] entries = new Entry[values.size()];
-        //转换为Entry[]
-        for (int i = 0; i < entries.length; i++) {
+
+        //转换
+        String[] attrNames = new String[colNames.size()];
+        for (int j = 0; j < attrNames.length; j++) {
+            attrNames[j] = colNames.get(j).getText().toUpperCase();
+        }
+        String[] attrValues = new String[values.size()];
+        for (int i = 0; i < attrValues.length; i++) {
             SQLParser.Literal_valueContext val = values.get(i);
-            Entry tmp;
+            String tmp;
             TerminalNode stringVal = val.STRING_LITERAL();
             TerminalNode numericVal = val.NUMERIC_LITERAL();
             if (stringVal == null) {
-                tmp = new Entry(Integer.parseInt(numericVal.getText()));
+                tmp = numericVal.getText();
             } else {
-                tmp = new Entry(stringVal.getText());
+                tmp = stringVal.getText();
             }
-            entries[i] = tmp;
+            attrValues[i] = tmp;
         }
 
         if (colNames.size() == 0) {
-            int attrsNum = statementAdapter.tableAttrsNum(tableName);
-            if (values.size() != attrsNum) {
-                //TODO 异常处理
-                System.out.println("Insert Failure! valueEntries.size()!=attrsNum");
-                return null;
-            } else {
-                statementAdapter.insertTableRow(tableName, new Row(entries));
-            }
+            statementAdapter.insertTableRow(tableName, attrValues);
         } else {
-            //如果有colomn name, 那么，value的个数要与colomn个数一致
-            if (colNames.size() != values.size()) {
-                //TODO 异常处理
-                System.out.println("Insert Failure! colNames.size() != values.size()");
-            } else {
-                String primaryKeyName = statementAdapter.getTablePrimaryAttr(tableName);
-                String[] attrNames = new String[colNames.size()];
-                boolean hasPrimaryKey = false;
-                for (int j = 0; j < attrNames.length; j++) {
-                    attrNames[j] = colNames.get(j).getText().toUpperCase();
-                    if (attrNames[j].equals(primaryKeyName)){
-                        hasPrimaryKey = true;
-                    }
-                }
-                if (hasPrimaryKey){
-                    statementAdapter.insertTableRow(attrNames,entries);
-                }else{
-                    //TODO 异常处理 插入的属性中没有主键
-                }
-            }
+            statementAdapter.insertTableRow(tableName,attrNames,attrValues);
         }
 
         //且必须含有主键
         return null;
     }
+
+    @Override
+    public Object visitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
+        String tableName = ctx.table_name().getText();
+        WhereCondition wherecond = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
+        statementAdapter.delFromTable(tableName,wherecond);
+        return null;
+    }
+
+    @Override
+    public Object visitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
+        String tableName = ctx.table_name().getText();
+        String colName = ctx.column_name().getText();
+        String attrValue = ctx.expression().getText();
+        WhereCondition wherecond = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
+        statementAdapter.updateTable(tableName,colName,attrValue,wherecond);
+        return null;
+    }
+
     @Override
     public Object visitSelect_stmt(SQLParser.Select_stmtContext ctx) {
         // select clause
@@ -191,6 +185,7 @@ public class Visitor extends SQLBaseVisitor {
             return new JoinCondition(operator, tableName1, tableName2, columnName1, columnName2);
         }
     }
+
 
 
 }
