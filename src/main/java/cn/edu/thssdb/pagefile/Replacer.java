@@ -1,13 +1,11 @@
 package cn.edu.thssdb.pagefile;
 
 
-import java.util.LinkedList;
 
-class NoPageCanBeReplacedException extends Exception {
-    public NoPageCanBeReplacedException(String message) {
-        super(message);
-    }
-}
+
+import cn.edu.thssdb.exception.NoPageCanBeReplacedException;
+
+import java.util.LinkedList;
 
 //This replacer uses LRU algorithm.
 public class Replacer {
@@ -36,7 +34,7 @@ public class Replacer {
         System.out.println();
     }
 
-    public int[] pickVictims(FrameDescription[] frameTab, int victimNum) throws NoPageCanBeReplacedException{
+    public int[] pickVictims(FrameDescription[] frameTab, int victimNum) throws NoPageCanBeReplacedException {
         int[] victimId = new int[victimNum];
         int curVictimNum = 0;
         int index = lruInfo.size()-1;
@@ -51,7 +49,7 @@ public class Replacer {
             }
         }
         if (curVictimNum < victimNum){
-            throw new NoPageCanBeReplacedException("In Replacer.pickVictims. No enough pages can be replaced.");
+            throw new NoPageCanBeReplacedException();
         }
 
         for (int i: victimId){

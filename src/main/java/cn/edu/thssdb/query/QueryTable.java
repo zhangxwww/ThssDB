@@ -27,9 +27,9 @@ public class QueryTable implements Iterator<Row> {
         int numColumns = columns.size();
         for (int i = 0; i < numColumns; i++) {
             Column c = columns.get(i);
-            if (c.getName().equals(attr1)) {
+            if (c.getName().toUpperCase().equals(attr1.toUpperCase())) {
                 this.index1 = i;
-            } else if (c.getName().equals(attr2)) {
+            } else if (c.getName().toUpperCase().equals(attr2.toUpperCase())) {
                 this.index2 = i;
             }
         }
@@ -45,7 +45,7 @@ public class QueryTable implements Iterator<Row> {
             int numColumns = columns.size();
             for (int i = 0; i < numColumns; i++) {
                 Column c = columns.get(i);
-                if (c.getName().equals(attr)) {
+                if (c.getName().toUpperCase().equals(attr.toUpperCase())) {
                     this.index1 = i;
                 }
             }

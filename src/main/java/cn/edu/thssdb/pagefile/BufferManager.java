@@ -1,13 +1,10 @@
 package cn.edu.thssdb.pagefile;
 
-import cn.edu.thssdb.pagefile.FrameDescription;
-import cn.edu.thssdb.pagefile.Page;
+import cn.edu.thssdb.exception.NoPageCanBeReplacedException;
 import cn.edu.thssdb.utils.Global;
 
-import java.awt.*;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.LinkedList;
 import java.util.List;
 
 
