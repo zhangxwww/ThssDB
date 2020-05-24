@@ -20,15 +20,16 @@ import java.util.*;
 public class test {
     public static void main(String[] args) {
 
+        /*
         String len = "insert into student(name) VALUES ('bob',15)";
         CharStream input = CharStreams.fromString(len);
         SQLLexer lexer = new SQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         SQLParser parser = new SQLParser(tokens);
-        Visitor visitor = new Visitor();
+        // Visitor visitor = new Visitor();
         SQLParser.ParseContext ctxTest = parser.parse();
 
-        System.out.println(visitor.visitParse(ctxTest));
+        System.out.println(visitor.visitParse(ctxTest));*/
 
 //        SQLBaseListener listener = new SQLBaseListener();
 
