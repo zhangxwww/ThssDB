@@ -77,26 +77,17 @@ public class Table implements Iterable<Row> {
 
     public void insert(Row row) {
         // TODO
-        if (this.isInTransaction) {
-            this.lock.writeLock().lock();
-        }
         Entry e = row.getEntries().get(primaryIndex);
         index.put(e, row);
     }
 
     public void delete(Row row) {
         // TODO
-        if (this.isInTransaction) {
-            this.lock.writeLock().lock();
-        }
         Entry e = row.getEntries().get(primaryIndex);
         index.remove(e);
     }
 
     public void delete(Iterator<Row> iterator) {
-        if (this.isInTransaction) {
-            this.lock.writeLock().lock();
-        }
         while (iterator.hasNext()) {
             Row r = iterator.next();
             delete(r);
@@ -105,9 +96,6 @@ public class Table implements Iterable<Row> {
 
     public void update(int attrIndex, Entry attrValue, Row row) {
         // TODO
-        if (this.isInTransaction) {
-            this.lock.writeLock().lock();
-        }
         Entry e = row.getEntries().get(primaryIndex);
         row.getEntries().set(attrIndex, attrValue);
         index.update(e, row);
@@ -115,9 +103,6 @@ public class Table implements Iterable<Row> {
 
     public void update(int attrIndex, Entry attrValue, Iterator<Row> rows) {
         // TODO
-        if (this.isInTransaction) {
-            this.lock.writeLock().lock();
-        }
         for (; rows.hasNext(); ) {
             Row r = rows.next();
             update(attrIndex, attrValue, r);
@@ -225,18 +210,7 @@ public class Table implements Iterable<Row> {
 
     @Override
     public Iterator<Row> iterator() {
-        if (this.isInTransaction) {
-            this.lock.readLock().lock();
-        }
         return new TableIterator(this);
-    }
-
-    public boolean isInTransaction() {
-        return isInTransaction;
-    }
-
-    public void setInTransaction(boolean value) {
-        this.isInTransaction = value;
     }
 
     public ReentrantReadWriteLock getLock() {

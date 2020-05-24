@@ -67,7 +67,7 @@ public class IServiceHandler implements IService.Iface {
             String statement = req.getStatement();
             // TODO parse the statement
             System.out.println(statement);
-
+            executer.execute(statement);
             resp.setStatus(new Status(Global.SUCCESS_CODE));
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));

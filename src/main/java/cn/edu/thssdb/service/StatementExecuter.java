@@ -14,13 +14,12 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class StatementExecuter {
-	private final static String transaction_text = "BEGIN TRANSACTION;";
-	private final static String commit_text = "COMMIT;";
-	private boolean isInTransaction = false;
+	private final static String transaction_text = "BEGIN TRANSACTION";
+	private final static String commit_text = "COMMIT";
 	private StatementAdapter adapter;
 	private Manager m;
 
-	public StatementExecuter() {
+	StatementExecuter() {
 		Manager m = new Manager();
 		m.createDatabaseIfNotExists("TEST");
 		Database database = m.switchDatabase("TEST");
@@ -29,13 +28,10 @@ public class StatementExecuter {
 
 	public void execute(String statement) {
 		if (statement.toUpperCase().trim().equals(transaction_text)) {
-			this.isInTransaction = true;
-			this.adapter.setInTransaction(true);
+			this.adapter.initializeTransaction();
 		} else if (statement.toUpperCase().trim().equals(commit_text)) {
-			if (this.isInTransaction) {
-				this.adapter.releaseExclusiveLocks();
-				this.isInTransaction = false;
-				this.adapter.setInTransaction(false);
+			if (this.adapter.getInTransaction()) {
+				this.adapter.terminateTransaction();
 			}
 		} else {
 			CharStream input = CharStreams.fromString(statement);
