@@ -47,16 +47,13 @@ public class Database {
 
     }
 
-    private void persist() {
+    public void persist() {
         // TODO
         //把tables先存好
         for (Table t : tables.values()) {
-            t.serialize(persistManager); //这一步到bufferPool
-            t.persist(persistManager); //这一步从bufferPool到磁盘
-            /*
-             * 这里有疑问，因为这样就相当于没有利用内存的作用，就是要存到磁盘，反而分了两步，浪费了。
-             * 除非还有其他情况会用到serialize，比如checkout？
-             */
+            byte[] bData = t.serialize();
+            persistManager.storeTable(t.tableName, bData); //to buffer pool
+            persistManager.flushTable(t.tableName); // to disc
         }
         //把管理信息存好
         //根据tables和psm来set一下tableInfos
@@ -166,9 +163,7 @@ public class Database {
                     tableFramesNum.put(tbInfo.tableName, tbInfo.frameNum);
                     tableInfos.add(tbInfo);
                 }
-
             }
-
         } catch (EOFException e) {
             System.out.println("读取数据库的表信息： 类对象已完全读入");
         } catch (FileNotFoundException e) {
@@ -186,7 +181,15 @@ public class Database {
             for (tableInfo tb : tableInfos) {
                 System.out.println(tb.tableName + tb.columns.toString());
             }
+            for (Table t : tables.values()) {
+                byte[] bData = persistManager.retrieveTable(t.tableName);
+                t.recover(bData); //表获取数据
+            }
         }
+    }
+
+    public String getName() {
+        return name;
     }
 
     public void quit() {

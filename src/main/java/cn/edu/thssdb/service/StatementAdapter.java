@@ -6,10 +6,13 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import cn.edu.thssdb.utils.Global;
 import javafx.util.Pair;
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Random;
 
 import cn.edu.thssdb.schema.*;
 
@@ -18,20 +21,36 @@ public class StatementAdapter {
 	private boolean isInTransaction = false;
 	private List<Table> exclusiveLockedTables = new ArrayList<Table>();
 
+	private static long transactionID;
+	private LogHandler logHandler = null;
+
 	public StatementAdapter(Database database) {
 		this.database = database;
+		logHandler = new LogHandler(database);
+		//并且自动查询log文件，看看有没有要恢复的内容
+		this.recoverUncommittedCmd();
 	}
 
 	public void initializeTransaction() {
 		this.isInTransaction = true;
+		transactionID = (new Random()).nextLong();
 	}
 
 	public void createTable(String tbName, Column[] cols) {
 		database.createTable(tbName, cols);
+		if(isInTransaction) {
+			logHandler.addCreateTableLog(transactionID,tbName);
+		}
 	}
 
 	public void dropTable(String tbName) {
-		database.dropTable(tbName);
+		//如果在事务处理中，就不能在这一步真的删除表
+		if (isInTransaction) {
+			logHandler.addDropTableLog(transactionID,tbName);
+		}else{
+			database.dropTable(tbName);
+		}
+
 	}
 
 	public int tableAttrsNum(String tbName) {
@@ -53,31 +72,14 @@ public class StatementAdapter {
 			if (this.isInTransaction) {
 			    t.getLock().writeLock().lock();
 			    this.exclusiveLockedTables.add(t);
+				logHandler.addInsertRowLog(transactionID, tbName, t.getPrimaryKeyName(), attrValues[t.getPrimaryKeyIndex()]);
             }
 			ArrayList<Column> attrs = t.getColumns();
 			Entry[] entries = new Entry[attrsNum];
 			for (int i = 0; i < attrs.size(); i++) {
 				Column tmpAttr = attrs.get(i);
 				ColumnType attrType = tmpAttr.getType();
-				Entry e = null;
-				switch (attrType) {
-					case INT:
-						e = new Entry(Integer.parseInt(attrValues[i]));
-						break;
-					case LONG:
-						e = new Entry(Long.parseLong(attrValues[i]));
-						break;
-					case FLOAT:
-						e = new Entry(Float.parseFloat(attrValues[i]));
-						break;
-					case DOUBLE:
-						e = new Entry(Double.parseDouble(attrValues[i]));
-						break;
-					case STRING:
-						e = new Entry(attrValues[i]);
-						break;
-				}
-				entries[i] = e;
+				entries[i] = parseValue(attrType, attrValues[i]);
 			}
 			t.insert(new Row(entries));
 		}
@@ -90,10 +92,13 @@ public class StatementAdapter {
 			throw new WrongInsertArgumentNumException();
 		} else {
 			String primaryKeyName = getTablePrimaryAttr(tbName);
+			int primaryKeyIndex = -1;
 			boolean hasPrimaryKey = false;
-			for (String attrName : attrNames) {
+			for (int i = 0; i < attrNames.length; i++) {
+				String attrName = attrNames[i];
 				if (attrName.toUpperCase().equals(primaryKeyName.toUpperCase())) {
 					hasPrimaryKey = true;
+					primaryKeyIndex = i;
 				}
 			}
 			if (!hasPrimaryKey) {
@@ -106,6 +111,7 @@ public class StatementAdapter {
             if (this.isInTransaction) {
                 t.getLock().writeLock().lock();
                 this.exclusiveLockedTables.add(t);
+                logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValues[primaryKeyIndex]);
             }
 			ArrayList<Column> attrs = t.getColumns();
 			Entry[] entries = new Entry[attrs.size()];
@@ -135,7 +141,16 @@ public class StatementAdapter {
         }
 		QueryTable q = getQueryTable(tbName, wherecond);
 		while (q.hasNext()) {
-			t.delete(q.next());
+			Row r = q.next();
+			if (isInTransaction){
+				int attrNum = tableAttrsNum(tbName);
+				String[] attrValues = new String[attrNum];
+				for (int i = 0; i < attrNum; i++) {
+					attrValues[i] = r.getEntry(i);
+				}
+				logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
+			}
+			t.delete(r);
 		}
 	}
 
@@ -144,13 +159,17 @@ public class StatementAdapter {
 		return t.getPrimaryKeyName();
 	}
 
+	public LogHandler getLogHandler() {
+		return this.logHandler;
+	}
+
 	public void updateTable(String tbName, String colName, String attrValue, WhereCondition wherecond) {
 		Table t = database.getTable(tbName);
         if (this.isInTransaction) {
             t.getLock().writeLock().lock();
             this.exclusiveLockedTables.add(t);
         }
-		QueryTable q = getQueryTable(tbName, wherecond);
+
 		ColumnType cType = null;
 		int attrIndex = -1;
 		for (int i = 0; i < t.getColumns().size(); i++) {
@@ -166,9 +185,26 @@ public class StatementAdapter {
 		}
 		assert cType != null;
 		Entry e = parseValue(cType, attrValue);
-
+		QueryTable q = getQueryTable(tbName, wherecond);
 		while (q.hasNext()) {
-			t.update(attrIndex, e, q.next());
+			Row r = q.next();
+			if (isInTransaction) {
+				Row oldRow = r;
+				int attrNum = tableAttrsNum(tbName);
+				String[] attrValues = new String[attrNum];
+				for (int i = 0; i < attrNum; i++) {
+					attrValues[i] = r.getEntry(i);
+				}
+				logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
+				String primaryKeyName = t.getPrimaryKeyName();
+				if (primaryKeyName.toUpperCase().equals(colName)) {
+					//如果要update的正好是primaryKey
+					logHandler.addInsertRowLog(transactionID,tbName,primaryKeyName,attrValue);
+				}else{
+					logHandler.addInsertRowLog(transactionID,tbName,primaryKeyName,r.getEntry(t.getPrimaryKeyIndex()));
+				}
+			}
+			t.update(attrIndex, e, r);
 		}
 	}
 
@@ -234,6 +270,66 @@ public class StatementAdapter {
 			q = new QueryTable(null, t, null, null);
 		}
 		return q;
+	}
+
+	private void recoverUncommittedCmd() {
+		//需要倒序处理
+		ArrayList<String> uncommittedCmds = new ArrayList<>(0);
+		try {
+			File file = new File(logHandler.getPath());
+			if (file.exists()) {
+				FileReader fr = new FileReader(file);
+				BufferedReader br = new BufferedReader(fr);
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					if (line.length() > 0) {
+						uncommittedCmds.add(line);
+					}
+				}
+				//开始恢复
+				int cmdNum = uncommittedCmds.size();
+				for (int i = cmdNum - 1; i >= 0; i--) {
+					String[] strMsg = uncommittedCmds.get(i).split(" ");
+					String cmd = strMsg[1];
+					String tbName = strMsg[2];
+					if (cmd.equals("CREATE")){
+						database.dropTable(tbName);
+					}else if(cmd.equals("DROP")){
+						//由于目前在adpater里，对于事务状态下的drop就是什么也没动，所以这个就不用处理了
+						continue;
+					}else if(cmd.equals("DELETE")){
+						int attrNum = Integer.parseInt(strMsg[3]);
+						String[] attrValues = new String[attrNum];
+						for (int j = 0; j < attrNum; j++){
+							attrValues[j] = strMsg[4+i];
+						}
+						this.insertTableRow(tbName,attrValues);
+					}else if(cmd.equals("INSERT")){
+						String primaryKey = strMsg[3];
+						String primaryVal = strMsg[4];
+						WhereCondition wc = new WhereCondition("=",tbName,primaryKey,primaryVal);
+						this.delFromTable(tbName,wc);
+					}else{
+						System.out.println("Wrong Cmd");
+					}
+				}
+				database.persist(); //to disc
+				br.close();
+				fr.close();
+
+				//清空该文件
+				FileOutputStream fileWriter = new FileOutputStream(file, false);
+				String remain = "";
+				fileWriter.write(remain.getBytes());
+				fileWriter.flush();
+				fileWriter.close();
+
+
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
 	}
 
 

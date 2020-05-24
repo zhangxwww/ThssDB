@@ -25,6 +25,10 @@ public class Row implements Serializable {
     this.entries.addAll(entries);
   }
 
+  public String getEntry(int index) {
+    return this.entries.get(index).toString();
+  }
+
   public String toString() {
     if (entries == null)
       return "EMPTY";

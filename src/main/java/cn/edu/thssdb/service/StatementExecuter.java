@@ -6,6 +6,7 @@ import cn.edu.thssdb.parser.Visitor;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.utils.Global;
 import org.antlr.v4.runtime.CharStream;
 import org.antlr.v4.runtime.CharStreams;
 import org.antlr.v4.runtime.CommonTokenStream;
@@ -31,6 +32,7 @@ public class StatementExecuter {
 			this.adapter.initializeTransaction();
 		} else if (statement.toUpperCase().trim().equals(commit_text)) {
 			if (this.adapter.getInTransaction()) {
+				this.adapter.getLogHandler().commit(123);
 				this.adapter.terminateTransaction();
 			}
 		} else {
