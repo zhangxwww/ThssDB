@@ -190,6 +190,21 @@ public class Table implements Iterable<Row> {
         return this.columns;
     }
 
+
+    public String getPrimaryKeyName() {
+        return this.columns.get(primaryIndex).getName();
+    }
+
+    public int getAttributeIndex(String attrName) {
+        int index = -1;
+        for (int i = 0; i < this.columns.size(); i++) {
+            if (this.columns.get(i).getName().toUpperCase().equals(attrName.toUpperCase())) {
+                index = i;
+            }
+        }
+        return index;
+    }
+
     private class TableIterator implements Iterator<Row> {
         private Iterator<Pair<Entry, Row>> iterator;
 

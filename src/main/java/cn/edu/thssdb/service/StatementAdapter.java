@@ -85,8 +85,8 @@ public class StatementAdapter {
         } else {
             String primaryKeyName = getTablePrimaryAttr(tbName);
             boolean hasPrimaryKey = false;
-            for (int j = 0; j < attrNames.length; j++) {
-                if (attrNames[j].equals(primaryKeyName)) {
+            for (String attrName : attrNames) {
+                if (attrName.toUpperCase().equals(primaryKeyName.toUpperCase())) {
                     hasPrimaryKey = true;
                 }
             }
@@ -106,23 +106,7 @@ public class StatementAdapter {
                 for (int j = 0; j < attrNames.length; j++) {
                     if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
                         ColumnType attrType = tmpAttr.getType();
-                        switch (attrType) {
-                            case INT:
-                                e = new Entry(Integer.parseInt(attrValues[j]));
-                                break;
-                            case LONG:
-                                e = new Entry(Long.parseLong(attrValues[j]));
-                                break;
-                            case FLOAT:
-                                e = new Entry(Float.parseFloat(attrValues[j]));
-                                break;
-                            case DOUBLE:
-                                e = new Entry(Double.parseDouble(attrValues[j]));
-                                break;
-                            case STRING:
-                                e = new Entry(attrValues[j]);
-                                break;
-                        }
+                        e = parseValue(attrType,attrValues[j]);
                         break;
                     }//为给出的属性值就为null
                 }
@@ -136,15 +120,40 @@ public class StatementAdapter {
 
     public void delFromTable(String tbName, WhereCondition wherecond) {
         //whereCondition可能为空
-        return;
+        Table t = dbTEST.getTable(tbName);
+        QueryTable q = getQueryTable(tbName,wherecond);
+        while (q.hasNext()) {
+            t.delete(q.next());
+        }
     }
 
     public String getTablePrimaryAttr(String tbName) {
-        return "ID";
+        Table t = dbTEST.getTable(tbName);
+        return t.getPrimaryKeyName();
     }
 
     public void updateTable(String tbName, String colName, String attrValue, WhereCondition wherecond) {
-        return;
+        Table t = dbTEST.getTable(tbName);
+        QueryTable q = getQueryTable(tbName,wherecond);
+        ColumnType cType = null;
+        int attrIndex = -1;
+        for (int i = 0; i < t.getColumns().size(); i++) {
+            Column c = t.getColumns().get(i);
+            if (c.getName().toUpperCase().equals(colName.toUpperCase())) {
+                cType = c.getType();
+                attrIndex = i;
+                break;
+            }
+        }
+        if (attrIndex == -1) {
+            // TODO throw error: attr not in columns
+        }
+        assert cType != null;
+        Entry e = parseValue(cType,attrValue);
+
+        while (q.hasNext()) {
+            t.update(attrIndex,e,q.next());
+        }
     }
 
 
@@ -183,7 +192,7 @@ public class StatementAdapter {
             String attr = wc.attr;
             ColumnType cType = null;
             for (Column c : t.getColumns()) {
-                if (c.getName().equals(attr)) {
+                if (c.getName().toUpperCase().equals(attr.toUpperCase())) {
                     cType = c.getType();
                     break;
                 }
@@ -241,14 +250,14 @@ public class StatementAdapter {
                     index = first;
                 }
             } else {
-                if (tbName.equals(t1)) {
+                if (tbName.toUpperCase().equals(t1.toUpperCase())) {
                     int tmp = attrs.indexOf(attrName);
                     if (tmp >= midIndex) {
                         // TODO throw error: attrName not exists in table
                     } else {
                         index = tmp;
                     }
-                } else if (tbName.equals(t2)) {
+                } else if (tbName.toUpperCase().equals(t2.toUpperCase())) {
                     int tmp = attrs.lastIndexOf(attrName);
                     if (tmp < midIndex) {
                         // TODO throw error: attrName not exists in table
@@ -272,29 +281,29 @@ public class StatementAdapter {
         ArrayList<Column> c2 = database.getTable(t2).getColumns();
         if (jc.table1.equals(t1) && jc.table2.equals(t2)) {
             for (int i = 0; i < c1.size(); ++i) {
-                if (c1.get(i).getName().equals(jc.attr1)) {
+                if (c1.get(i).getName().toUpperCase().equals(jc.attr1.toUpperCase())) {
                     results.set(0, i);
                     break;
                 }
                 // TODO throw error: attr not in table
             }
             for (int i = 0; i < c2.size(); ++i) {
-                if (c2.get(i).getName().equals(jc.attr2)) {
+                if (c2.get(i).getName().toUpperCase().equals(jc.attr2.toUpperCase())) {
                     results.set(1, i + midIndex);
                     break;
                 }
                 // TODO throw error: attr not in table
             }
-        } else if (jc.table1.equals(t2) && jc.table2.equals(t1)) {
+        } else if (jc.table1.toUpperCase().equals(t2.toUpperCase()) && jc.table2.toUpperCase().equals(t1.toUpperCase())) {
             for (int i = 0; i < c1.size(); ++i) {
-                if (c1.get(i).getName().equals(jc.attr2)) {
+                if (c1.get(i).getName().toUpperCase().equals(jc.attr2.toUpperCase())) {
                     results.set(0, i);
                     break;
                 }
                 // TODO throw error: attr not in table
             }
             for (int i = 0; i < c2.size(); ++i) {
-                if (c2.get(i).getName().equals(jc.attr1)) {
+                if (c2.get(i).getName().toUpperCase().equals(jc.attr1.toUpperCase())) {
                     results.set(1, i + midIndex);
                     break;
                 }
@@ -310,7 +319,7 @@ public class StatementAdapter {
         if (wc == null) {
             return true;
         }
-        if (wc.tableName.equals(t1) || wc.tableName.equals(t2)) {
+        if (wc.tableName.toUpperCase().equals(t1.toUpperCase()) || wc.tableName.toUpperCase().equals(t2.toUpperCase())) {
             return true;
         }
         if (wc.tableName.equals("")) {
@@ -318,7 +327,7 @@ public class StatementAdapter {
             Table table2 = database.getTable(t2);
             boolean found = false;
             for (Column c : table1.getColumns()) {
-                if (c.getName().equals(wc.attr)) {
+                if (c.getName().toUpperCase().equals(wc.attr.toUpperCase())) {
                     found = true;
                     break;
                 }
@@ -327,7 +336,7 @@ public class StatementAdapter {
                 return true;
             }
             for (Column c : table2.getColumns()) {
-                if (c.getName().equals(wc.attr)) {
+                if (c.getName().toUpperCase().equals(wc.attr.toUpperCase())) {
                     return false;
                 }
             }
