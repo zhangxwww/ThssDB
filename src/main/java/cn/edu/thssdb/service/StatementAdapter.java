@@ -14,27 +14,25 @@ import java.util.List;
 import cn.edu.thssdb.schema.*;
 
 public class StatementAdapter {
+    private Database database;
+    private boolean isInTransaction = false;
+    private List<Table> exclusiveLockedTables = new ArrayList<Table>();
 
-    private Manager m;
-    private Database dbTEST;
-
-    public StatementAdapter() {
-        m = new Manager();
-        m.createDatabaseIfNotExists("TEST");
-        dbTEST = m.switchDatabase("TEST");
+    public StatementAdapter(Database database) {
+        this.database = database;
     }
 
     public void createTable(String tbName, Column[] cols) {
-        dbTEST.createTable(tbName, cols);
+        database.createTable(tbName, cols);
     }
 
     public void dropTable(String tbName) {
-        dbTEST.dropTable(tbName);
+        database.dropTable(tbName);
     }
 
     public int tableAttrsNum(String tbName) {
         //获取该表的属性个数
-        Table t = dbTEST.getTable(tbName);
+        Table t = database.getTable(tbName);
         return t.getColumns().size();
     }
 
@@ -47,7 +45,8 @@ public class StatementAdapter {
             return;
         } else {
             //TODO 插入整行
-            Table t = dbTEST.getTable(tbName);
+            Table t = database.getTable(tbName);
+            this.exclusiveLockedTables.add(t);
             ArrayList<Column> attrs = t.getColumns();
             Entry[] entries = new Entry[attrsNum];
             for (int i = 0; i < attrs.size(); i++) {
@@ -97,7 +96,8 @@ public class StatementAdapter {
             }
 
             //插入一条Row
-            Table t = dbTEST.getTable(tbName);
+            Table t = database.getTable(tbName);
+            this.exclusiveLockedTables.add(t);
             ArrayList<Column> attrs = t.getColumns();
             Entry[] entries = new Entry[attrs.size()];
             for (int i = 0; i < attrs.size(); i++) {
@@ -177,7 +177,7 @@ public class StatementAdapter {
 
     private QueryTable getQueryTable(String table, WhereCondition wc) {
         QueryTable q;
-        Table t = dbTEST.getTable(table);
+        Table t = database.getTable(table);
         if (wc != null && (wc.tableName.equals(table) || wc.tableName.equals(""))) {
             AttrCompare compare = new AttrCompare(wc.op);
             String attr = wc.attr;
@@ -268,8 +268,8 @@ public class StatementAdapter {
         List<Integer> results = new ArrayList<>();
         List<String> attrs = new ArrayList<>();
         int midIndex = mergeAttrs(t1, t2, attrs);
-        ArrayList<Column> c1 = dbTEST.getTable(t1).getColumns();
-        ArrayList<Column> c2 = dbTEST.getTable(t2).getColumns();
+        ArrayList<Column> c1 = database.getTable(t1).getColumns();
+        ArrayList<Column> c2 = database.getTable(t2).getColumns();
         if (jc.table1.equals(t1) && jc.table2.equals(t2)) {
             for (int i = 0; i < c1.size(); ++i) {
                 if (c1.get(i).getName().equals(jc.attr1)) {
@@ -314,8 +314,8 @@ public class StatementAdapter {
             return true;
         }
         if (wc.tableName.equals("")) {
-            Table table1 = dbTEST.getTable(t1);
-            Table table2 = dbTEST.getTable(t2);
+            Table table1 = database.getTable(t1);
+            Table table2 = database.getTable(t2);
             boolean found = false;
             for (Column c : table1.getColumns()) {
                 if (c.getName().equals(wc.attr)) {
@@ -343,10 +343,10 @@ public class StatementAdapter {
         Table table1, table2;
         List<Column> c1 = new ArrayList<>();
         List<Column> c2 = new ArrayList<>();
-        table1 = dbTEST.getTable(t1);
+        table1 = database.getTable(t1);
         c1 = table1.getColumns();
         if (t2 != null && !t2.equals("")) {
-            table2 = dbTEST.getTable(t2);
+            table2 = database.getTable(t2);
             c2 = table2.getColumns();
         }
         for (int i : index) {
@@ -367,18 +367,30 @@ public class StatementAdapter {
         Table table1, table2;
         int midIndex = 0;
         if (t1 != null && !t1.equals("")) {
-            table1 = dbTEST.getTable(t1);
+            table1 = database.getTable(t1);
             midIndex = tableAttrsNum(t1);
             for (Column c : table1.getColumns()) {
                 mergedAttrs.add(c.getName());
             }
         }
         if (t2 != null && !t2.equals("")) {
-            table2 = dbTEST.getTable(t2);
+            table2 = database.getTable(t2);
             for (Column c : table2.getColumns()) {
                 mergedAttrs.add(c.getName());
             }
         }
         return midIndex;
+    }
+
+    void setInTransaction(boolean value) {
+        this.isInTransaction = value;
+    }
+
+    boolean getInTransaction() {
+        return this.isInTransaction;
+    }
+
+    void releaseExclusiveLocks() {
+
     }
 }
