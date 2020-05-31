@@ -17,24 +17,32 @@ import java.util.List;
 public class StatementExecuter {
 	private final static String transaction_text = "BEGIN TRANSACTION";
 	private final static String commit_text = "COMMIT";
+	private final static String rollback_text = "ROLLBACK";
 	private StatementAdapter adapter;
-	private Manager m;
+	private Database database;
+	private long sessionId;
 
-	StatementExecuter() {
-		Manager m = new Manager();
-		m.createDatabaseIfNotExists("TEST");
-		Database database = m.switchDatabase("TEST");
-		adapter = new StatementAdapter(database);
+	StatementExecuter(Database db, long sessionId) {
+		this.database = db;
+		this.sessionId = sessionId;
+		adapter = new StatementAdapter(this.database, this.sessionId);
 	}
 
 	public void execute(String statement) {
 		if (statement.toUpperCase().trim().equals(transaction_text)) {
-			this.adapter.initializeTransaction();
+			if (!this.adapter.getInTransaction()) {
+				this.adapter.initializeTransaction();
+			} // TODO: ERROR HANDLING
 		} else if (statement.toUpperCase().trim().equals(commit_text)) {
 			if (this.adapter.getInTransaction()) {
 				this.adapter.getLogHandler().commit(123);
 				this.adapter.terminateTransaction();
 			}
+		} else if (statement.toUpperCase().trim().equals(rollback_text)) {
+			if (this.adapter.getInTransaction()) {
+				this.database.recoverUncommittedCmd(this.sessionId);
+				this.adapter.terminateTransaction();
+			} // TODO: ERROR HANDLING
 		} else {
 			CharStream input = CharStreams.fromString(statement);
 			SQLLexer lexer = new SQLLexer(input);

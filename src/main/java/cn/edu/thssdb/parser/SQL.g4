@@ -136,7 +136,7 @@ result_column
 
 table_query :
     table_name
-    | table_name ( K_JOIN table_name )+ K_ON multiple_condition ;
+    | table_name ( ( (K_LEFT | K_RIGHT) K_OUTER)? K_JOIN table_name )+ K_ON multiple_condition ;
 
 auth_level :
     K_SELECT | K_INSERT | K_UPDATE | K_DELETE | K_DROP ;
@@ -207,6 +207,9 @@ K_IDENTIFIED : I D E N T I F I E D;
 K_INSERT : I N S E R T;
 K_INTO : I N T O;
 K_JOIN : J O I N;
+K_LEFT : L E F T;
+K_RIGHT : R I G H T;
+K_OUTER : O U T E R;
 K_KEY : K E Y;
 K_NOT : N O T;
 K_NULL : N U L L;
