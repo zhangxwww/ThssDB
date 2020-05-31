@@ -4,6 +4,7 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
+import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.type.ColumnType;
 import org.antlr.runtime.tree.ParseTree;
 import org.antlr.v4.runtime.*;
@@ -25,7 +26,11 @@ public class test {
         SQLLexer lexer = new SQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         SQLParser parser = new SQLParser(tokens);
-        Visitor visitor = new Visitor();
+	    Manager m = new Manager();
+	    m.createDatabaseIfNotExists("TEST");
+	    Database database = m.switchDatabase("TEST");
+	    StatementAdapter adapter = new StatementAdapter(database);
+        Visitor visitor = new Visitor(adapter);
         SQLParser.ParseContext ctxTest = parser.parse();
 
         System.out.println(visitor.visitParse(ctxTest));
