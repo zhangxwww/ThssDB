@@ -18,7 +18,6 @@ public class Table implements Iterable<Row> {
     private ArrayList<Column> columns;
     public BPlusTree<Entry, Row> index;
     public int primaryIndex;
-    private boolean isInTransaction = false;
 
     public Table(String databaseName, String tableName, Column[] columns) {
         // TODO
@@ -61,18 +60,14 @@ public class Table implements Iterable<Row> {
         this.primaryIndex = primaryIndex;
     }
 
-    public void recover(PageFilePersist persistManager) {
+    public void recover(byte[] bData) {
         // TODO
         //从磁盘中反序列化得到纪录
-        ArrayList<Row> rows = deserialize(persistManager);
+        ArrayList<Row> rows = deserialize(bData);
         for (Row row : rows) {
             Entry e = row.getEntries().get(primaryIndex);
             index.put(e, row);
         }
-    }
-
-    public void recover() {
-        // TODO
     }
 
     public void insert(Row row) {
@@ -109,21 +104,8 @@ public class Table implements Iterable<Row> {
         }
     }
 
-
-    //   When this function is called, those dirty pages that related to this table
-//   will be flushed to corresponding position on disks.
-    public void persist(PageFilePersist persistManager) {
-        // TODO
-        this.lock.writeLock().lock();
-        try {
-            persistManager.flushTable(tableName);
-        } finally {
-            this.lock.writeLock().unlock();
-        }
-    }
-
-    ////   Take the rows to the buffer pool
-    public void serialize(PageFilePersist persistManager) {
+    ////   Make the rows to bytes
+    public byte[] serialize() {
         // TODO
         try {
             ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
@@ -134,19 +116,18 @@ public class Table implements Iterable<Row> {
                 oos.writeObject(r);
             }
             byte[] bData = bOutStream.toByteArray();
-            persistManager.storeTable(tableName, bData);
+            return bData;
+//            persistManager.storeTable(tableName, bData);
 
         } catch (Exception e) {
             e.printStackTrace();
         }
-
-
+        return null;
     }
 
-    private ArrayList<Row> deserialize(PageFilePersist persistManager) {
+    private ArrayList<Row> deserialize(byte[] bData) {
         // TODO
         ArrayList<Row> rows = new ArrayList<Row>();
-        byte[] bData = persistManager.retrieveTable(tableName);
         index = new BPlusTree<Entry, Row>();
         try {
             ByteArrayInputStream bInStream = new ByteArrayInputStream(bData);
@@ -178,6 +159,10 @@ public class Table implements Iterable<Row> {
 
     public String getPrimaryKeyName() {
         return this.columns.get(primaryIndex).getName();
+    }
+
+    public int getPrimaryKeyIndex() {
+        return this.primaryIndex;
     }
 
     public int getAttributeIndex(String attrName) {

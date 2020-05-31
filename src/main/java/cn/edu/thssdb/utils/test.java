@@ -21,19 +21,16 @@ import java.util.*;
 public class test {
     public static void main(String[] args) {
 
+        /*
         String len = "insert into student(name) VALUES ('bob',15)";
         CharStream input = CharStreams.fromString(len);
         SQLLexer lexer = new SQLLexer(input);
         CommonTokenStream tokens = new CommonTokenStream(lexer);
         SQLParser parser = new SQLParser(tokens);
-	    Manager m = new Manager();
-	    m.createDatabaseIfNotExists("TEST");
-	    Database database = m.switchDatabase("TEST");
-	    StatementAdapter adapter = new StatementAdapter(database);
-        Visitor visitor = new Visitor(adapter);
+        // Visitor visitor = new Visitor();
         SQLParser.ParseContext ctxTest = parser.parse();
 
-        System.out.println(visitor.visitParse(ctxTest));
+        System.out.println(visitor.visitParse(ctxTest));*/
 
 //        SQLBaseListener listener = new SQLBaseListener();
 

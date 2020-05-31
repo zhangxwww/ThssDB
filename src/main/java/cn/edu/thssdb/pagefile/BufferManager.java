@@ -165,6 +165,8 @@ public class BufferManager implements PageFileConst {
             }
         }
     }
+
+
     public void flushTable(String tableName){
         DiskManager discM = new DiskManager(Global.ROOT_PATH+databaseName+"/"+tableName);
         for (int i = 0; i < bufferPool.length; i++){

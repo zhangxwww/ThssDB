@@ -111,6 +111,9 @@ public class Manager {
     return null;
   }
 
+  private Database getCurDatabase () {
+    return databases.get(curDatabase);
+  }
 
   private static class ManagerHolder {
     private static final Manager INSTANCE = new Manager();
