@@ -6,19 +6,24 @@ import cn.edu.thssdb.rpc.thrift.DisconnetResp;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeResp;
+import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
 
 import javax.xml.bind.annotation.XmlElementDecl;
-import java.util.Date;
-import java.util.HashSet;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 public class IServiceHandler implements IService.Iface {
 
     private Set<Long> connected_sessionid = new HashSet<>();
-    private StatementExecuter executer = new StatementExecuter();
+    private HashMap<Long, StatementExecuter> executerList;
+    private Database database;
+
+    public IServiceHandler(Database db) {
+        super();
+        this.database = db;
+    }
+
     @Override
     public GetTimeResp getTime(GetTimeReq req) throws TException {
         GetTimeResp resp = new GetTimeResp();
@@ -36,8 +41,12 @@ public class IServiceHandler implements IService.Iface {
         if (username.equals(Global.USERNAME) && password.equals(Global.PASSWORD)) {
             resp.setStatus(new Status(Global.SUCCESS_CODE));
             long sessionid = (new Random()).nextLong();
+            while (sessionid == 0) {
+                sessionid = (new Random()).nextLong();
+            }
             resp.setSessionId(sessionid);
             connected_sessionid.add(sessionid);
+            executerList.put(sessionid, new StatementExecuter(database, sessionid));
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
             resp.setSessionId(0L);
@@ -52,6 +61,7 @@ public class IServiceHandler implements IService.Iface {
         long sessionid = req.getSessionId();
         if (connected_sessionid.contains(sessionid)) {
             connected_sessionid.remove(sessionid);
+            executerList.remove(sessionid);
             resp.setStatus(new Status(Global.SUCCESS_CODE));
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
@@ -73,7 +83,7 @@ public class IServiceHandler implements IService.Iface {
             boolean isAbort = true;
             // TODO hasResult, lists...
             try {
-                executer.execute(statement);
+                executerList.get(sessionid).execute(statement);
                 code = Global.SUCCESS_CODE;
                 isAbort = false;
             } catch (AmbiguousColumnException e) {

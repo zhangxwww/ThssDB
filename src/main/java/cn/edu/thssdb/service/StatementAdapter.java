@@ -20,20 +20,19 @@ public class StatementAdapter {
     private boolean isInTransaction = false;
     private List<Table> exclusiveLockedTables = new ArrayList<Table>();
 
-    private static long transactionID;
-    private LogHandler logHandler = null;
+	private static long transactionID;
+	private LogHandler logHandler = null;
+	private long transactionId;
 
-    public StatementAdapter(Database database) {
-        this.database = database;
-        logHandler = new LogHandler(database);
-        //并且自动查询log文件，看看有没有要恢复的内容
-        this.recoverUncommittedCmd();
-    }
+	public StatementAdapter(Database database, long sessionid) {
+		this.database = database;
+		this.transactionId = sessionid;
+		this.logHandler = new LogHandler(this.database);
+	}
 
-    public void initializeTransaction() {
-        this.isInTransaction = true;
-        transactionID = (new Random()).nextLong();
-    }
+	public void initializeTransaction() {
+		this.isInTransaction = true;
+	}
 
     public void createTable(String tbName, Column[] cols) {
         database.createTable(tbName, cols);
@@ -274,66 +273,6 @@ public class StatementAdapter {
         return q;
     }
 
-    private void recoverUncommittedCmd() {
-        //需要倒序处理
-        ArrayList<String> uncommittedCmds = new ArrayList<>(0);
-        try {
-            File file = new File(logHandler.getPath());
-            if (file.exists()) {
-                FileReader fr = new FileReader(file);
-                BufferedReader br = new BufferedReader(fr);
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                    if (line.length() > 0) {
-                        uncommittedCmds.add(line);
-                    }
-                }
-                //开始恢复
-                int cmdNum = uncommittedCmds.size();
-                for (int i = cmdNum - 1; i >= 0; i--) {
-                    String[] strMsg = uncommittedCmds.get(i).split(" ");
-                    String cmd = strMsg[1];
-                    String tbName = strMsg[2];
-                    if (cmd.equals("CREATE")){
-                        database.dropTable(tbName);
-                    }else if(cmd.equals("DROP")){
-                        //由于目前在adpater里，对于事务状态下的drop就是什么也没动，所以这个就不用处理了
-                        continue;
-                    }else if(cmd.equals("DELETE")){
-                        int attrNum = Integer.parseInt(strMsg[3]);
-                        String[] attrValues = new String[attrNum];
-                        for (int j = 0; j < attrNum; j++){
-                            attrValues[j] = strMsg[4+i];
-                        }
-                        this.insertTableRow(tbName,attrValues);
-                    }else if(cmd.equals("INSERT")){
-                        String primaryKey = strMsg[3];
-                        String primaryVal = strMsg[4];
-                        WhereCondition wc = new WhereCondition("=",tbName,primaryKey,primaryVal);
-                        this.delFromTable(tbName,wc);
-                    }else{
-                        System.out.println("Wrong Cmd");
-                    }
-                }
-                database.persist(); //to disc
-                br.close();
-                fr.close();
-
-                //清空该文件
-                FileOutputStream fileWriter = new FileOutputStream(file, false);
-                String remain = "";
-                fileWriter.write(remain.getBytes());
-                fileWriter.flush();
-                fileWriter.close();
-
-
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
-    }
-
 
     private Entry parseValue(ColumnType type, String value) {
         Entry instant;
@@ -553,11 +492,16 @@ public class StatementAdapter {
         return this.isInTransaction;
     }
 
-    void terminateTransaction() {
-        for (Table t : this.exclusiveLockedTables) {
-            t.getLock().writeLock().unlock();
-        }
-        this.exclusiveLockedTables.clear();
-        this.isInTransaction = false;
-    }
+	void terminateTransaction() {
+		for (Table t : this.exclusiveLockedTables) {
+			t.getLock().writeLock().unlock();
+		}
+		this.exclusiveLockedTables.clear();
+		this.isInTransaction = false;
+	}
+
+	void writeLog(String content) {
+		String logText = String.valueOf(this.transactionId) + " " + content;
+		this.logHandler.writeWAL(logText);
+	}
 }

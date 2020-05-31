@@ -46,7 +46,7 @@ public class LogHandler {
         writeWAL(line);
     }
 
-    private void writeWAL(String line) {
+    void writeWAL(String line) {
         line += "\t\n";
         try {
             File file = new File(WALpath);
