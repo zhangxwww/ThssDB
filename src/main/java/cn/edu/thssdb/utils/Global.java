@@ -7,14 +7,16 @@ public class Global {
 
   public static int fanout = 129;
 
-  public static int SUCCESS_CODE = 0;
-  public static int FAILURE_CODE = -1;
+  public static final int SUCCESS_CODE = 0;
+  public static final int FAILURE_CODE = -1;
 
   public static final int WRONG_INSERT_ARGUMENT_NUM_EXCEPTION_CODE = 400;
   public static final int PRIMARY_KEY_REQUIRED_EXCEPTION_CODE = 401;
   public static final int ATTR_NOT_EXISTS_EXCEPTION_CODE = 402;
   public static final int AMBIGUOUS_COLUMN_EXCEPTION_CODE = 403;
-  public static final int TABLE_NOT_EXISTS_EXCEPTION = 404;
+  public static final int TABLE_NOT_EXISTS_EXCEPTION_CODE = 404;
+  public static final int DUPLICATE_KEY_EXCEPTION_CODE = 405;
+  public static final int KEY_NOT_EXIST_EXCEPTION_CODE = 406;
 
   public static String DEFAULT_SERVER_HOST = "127.0.0.1";
   public static int DEFAULT_SERVER_PORT = 6667;

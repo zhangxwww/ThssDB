@@ -81,11 +81,20 @@ public class IServiceHandler implements IService.Iface {
 
             int code;
             boolean isAbort = true;
+            boolean hasResult = false;
             // TODO hasResult, lists...
             try {
-                executerList.get(sessionid).execute(statement);
+                StatementExecuter executer = executerList.get(sessionid);
+                executer.execute(statement);
                 code = Global.SUCCESS_CODE;
                 isAbort = false;
+                List<String> columnList = new ArrayList<>();
+                List<List<String>> rowList = new ArrayList<>();
+                if (executer.getResult(columnList, rowList)) {
+                    hasResult = true;
+                    resp.setColumnsList(columnList);
+                    resp.setRowList(rowList);
+                }
             } catch (AmbiguousColumnException e) {
                 code = e.code();
             } catch (AttrNotExistsException e) {
@@ -96,9 +105,14 @@ public class IServiceHandler implements IService.Iface {
                 code = e.code();
             } catch (WrongInsertArgumentNumException e) {
                 code = e.code();
+            } catch (DuplicateKeyException e) {
+                code = e.code();
+            } catch (KeyNotExistException e) {
+                code = e.code();
             }
             resp.setStatus(new Status(code));
             resp.setIsAbort(isAbort);
+            resp.setHasResult(hasResult);
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
         }

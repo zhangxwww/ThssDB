@@ -53,4 +53,9 @@ public class StatementExecuter {
 			visitor.visitParse(ctxTest);
 		}
 	}
+
+	public boolean getResult(List<String> columnList, List<List<String>> rowList) {
+		// TODO
+		return adapter.getResult(columnList, rowList);
+	}
 }

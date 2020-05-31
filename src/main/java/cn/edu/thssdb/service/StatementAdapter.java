@@ -10,6 +10,7 @@ import javafx.util.Pair;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Random;
 
@@ -23,6 +24,8 @@ public class StatementAdapter {
 	private static long transactionID;
 	private LogHandler logHandler = null;
 	private long transactionId;
+
+	private Table resultTable = null;
 
 	public StatementAdapter(Database database, long sessionid) {
 		this.database = database;
@@ -246,6 +249,7 @@ public class StatementAdapter {
                 database.getTable(table2).getLock().readLock().unlock();
             }
         }
+        resultTable = result;
         return result;
     }
 
@@ -504,4 +508,23 @@ public class StatementAdapter {
 		String logText = String.valueOf(this.transactionId) + " " + content;
 		this.logHandler.writeWAL(logText);
 	}
+
+    public boolean getResult(List<String> columnList, List<List<String>> rowList) {
+        if (resultTable == null) {
+            return false;
+        }
+        List<Column> cList = resultTable.getColumns();
+        for (Column c : cList) {
+            columnList.add(c.getName());
+        }
+        for (Row row : resultTable) {
+            List<String> rr = new ArrayList<>();
+            for (Entry e : row.getEntries()) {
+                rr.add(e.toString());
+            }
+            rowList.add(rr);
+        }
+	    resultTable = null;
+        return true;
+    }
 }
