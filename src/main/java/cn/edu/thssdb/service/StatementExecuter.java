@@ -35,7 +35,7 @@ public class StatementExecuter {
 			} // TODO: ERROR HANDLING
 		} else if (statement.toUpperCase().trim().equals(commit_text)) {
 			if (this.adapter.getInTransaction()) {
-				this.adapter.getLogHandler().commit(123);
+				this.adapter.getLogHandler().commit(sessionId);
 				this.adapter.terminateTransaction();
 			}
 		} else if (statement.toUpperCase().trim().equals(rollback_text)) {
