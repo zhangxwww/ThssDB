@@ -10,6 +10,12 @@ public class Global {
   public static int SUCCESS_CODE = 0;
   public static int FAILURE_CODE = -1;
 
+  public static final int WRONG_INSERT_ARGUMENT_NUM_EXCEPTION_CODE = 400;
+  public static final int PRIMARY_KEY_REQUIRED_EXCEPTION_CODE = 401;
+  public static final int ATTR_NOT_EXISTS_EXCEPTION_CODE = 402;
+  public static final int AMBIGUOUS_COLUMN_EXCEPTION_CODE = 403;
+  public static final int TABLE_NOT_EXISTS_EXCEPTION = 404;
+
   public static String DEFAULT_SERVER_HOST = "127.0.0.1";
   public static int DEFAULT_SERVER_PORT = 6667;
 
@@ -23,4 +29,5 @@ public class Global {
   public static final String ROOT_PATH = "./data/";
 
   public static final int BUFFER_POOL_PAGE_NUM = 20;
+
 }

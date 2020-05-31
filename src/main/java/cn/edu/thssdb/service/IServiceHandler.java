@@ -1,5 +1,6 @@
 package cn.edu.thssdb.service;
 
+import cn.edu.thssdb.exception.*;
 import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.rpc.thrift.DisconnetResp;
 import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
@@ -67,8 +68,27 @@ public class IServiceHandler implements IService.Iface {
             String statement = req.getStatement();
             // TODO parse the statement
             System.out.println(statement);
-            executer.execute(statement);
-            resp.setStatus(new Status(Global.SUCCESS_CODE));
+
+            int code;
+            boolean isAbort = true;
+            // TODO hasResult, lists...
+            try {
+                executer.execute(statement);
+                code = Global.SUCCESS_CODE;
+                isAbort = false;
+            } catch (AmbiguousColumnException e) {
+                code = e.code();
+            } catch (AttrNotExistsException e) {
+                code = e.code();
+            } catch (PrimaryKeyRequiredException e) {
+                code = e.code();
+            } catch (TableNotExistsException e) {
+                code = e.code();
+            } catch (WrongInsertArgumentNumException e) {
+                code = e.code();
+            }
+            resp.setStatus(new Status(code));
+            resp.setIsAbort(isAbort);
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
         }
