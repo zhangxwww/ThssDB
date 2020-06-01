@@ -143,11 +143,11 @@ public class Visitor extends SQLBaseVisitor {
 		String table2 = "";
 		int numTables = tables.size();
 		if (numTables == 1) {
-			table1 = tables.get(0).table_name().toString();
+			table1 = tables.get(0).table_name().get(0).getText();
 		} else {
 			// TODO: Exception Handle
-			table1 = tables.get(0).table_name().toString();
-			table2 = tables.get(1).table_name().toString();
+			table1 = tables.get(0).table_name().get(0).getText();
+			table2 = tables.get(1).table_name().get(0).getText();
 			SQLParser.Multiple_conditionContext joinConditionContext = tables.get(2).multiple_condition();
 			if (joinConditionContext != null) {
 				joinCondition = (JoinCondition) visitMultiple_condition(joinConditionContext);
