@@ -18,6 +18,7 @@ public class QueryTable implements Iterator<Row> {
     private int index2 = -1;
     private Entry instant;
     private Row nextRow;
+    private int width;
 
     QueryTable(AttrCompare attrCompare, Table table, String attr1, String attr2) {
         // TODO
@@ -39,6 +40,7 @@ public class QueryTable implements Iterator<Row> {
 
     public QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
         needWhere = attrCompare != null;
+        width = table.getColumns().size();
         iterator = table.iterator();
         if (needWhere) {
             this.attrCompare = attrCompare;
@@ -53,6 +55,10 @@ public class QueryTable implements Iterator<Row> {
             this.instant = instant;
         }
         this.isAttrInstCmp = true;
+    }
+
+    public int getWidth() {
+        return width;
     }
 
     @Override
