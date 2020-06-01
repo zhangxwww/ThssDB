@@ -5,7 +5,9 @@ import cn.edu.thssdb.type.ColumnType;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 
@@ -48,26 +50,14 @@ public class QueryTest {
 		executer.execute("INSERT INTO student VALUES (233333, 'zxw');");
 		executer.execute("INSERT INTO Student Values (10086,  'wyb');");
 		int i = 0;
+		HashMap<String, String> entries = new HashMap<String, String>();
 		for (Row row: table) {
-			switch (i) {
-				case 0:
-					assertEquals("010136", row.getEntry(0));
-					assertEquals("myq", row.getEntry(1));
-					break;
-				case 1:
-					assertEquals("233333", row.getEntry(0));
-					assertEquals("zxw", row.getEntry(1));
-					break;
-				case 2:
-					assertEquals("10086", row.getEntry(0));
-					assertEquals("wyb", row.getEntry(1));
-					break;
-				default:
-					fail();
-					break;
-			}
-			i += 1;
+			entries.put(row.getEntry(0), row.getEntry(1));
 		}
+		assertEquals(entries.size(), 3);
+		assertEquals(entries.get("010136"), "myq");
+		assertEquals(entries.get("233333"), "zxw");
+		assertEquals(entries.get("10086"), "wyb");
 	}
 
 	@Test
@@ -90,5 +80,85 @@ public class QueryTest {
 		Table studentTable = database.getTable("STUDENT");
 		Table gpaTable = database.getTable("GPA");
 
+		// Test first select statement
+		List<String> columnList = new ArrayList<>();
+		List<List<String>> rowList = new ArrayList<>();
+		executer.execute("SELECT  id, name  FROM  student WHERE  name = 'myq'");
+		assertTrue(executer.getResult(columnList, rowList));
+		assertEquals(columnList.size(), 2);
+		String[] expectedColumnlist = new String[] {"ID", "NAME"};
+		assertArrayEquals(columnList.toArray(), expectedColumnlist);
+		ArrayList<String[]> expectedRowList = new ArrayList<String[]> () {{
+			add(new String[] {"10136", "myq"});
+		}};
+		int rowListSize = rowList.size();
+		assertEquals(rowListSize, 1);
+		for (int i = 0; i < rowListSize; i++) {
+			assertArrayEquals(rowList.get(i).toArray(), expectedRowList.get(i));
+		}
+
+		// Test second select statement
+		columnList = new ArrayList<>();
+		rowList = new ArrayList<>();
+		executer.execute("SELECT  name  FROM  student WHERE  id = 233333");
+		assertTrue(executer.getResult(columnList, rowList));
+		assertEquals(columnList.size(), 1);
+		assertEquals(columnList.get(0), "NAME");
+		expectedRowList = new ArrayList<String[]> () {{
+			add(new String[] {"zxw"});
+		}};
+		rowListSize = rowList.size();
+		assertEquals(rowListSize, 1);
+		for (int i = 0; i < rowListSize; i++) {
+			assertArrayEquals(rowList.get(i).toArray(), expectedRowList.get(i));
+		}
+
+		// Test third select statement
+		columnList = new ArrayList<>();
+		rowList = new ArrayList<>();
+		executer.execute("SELECT  id  FROM  student WHERE  name = 'wyb'");
+		assertTrue(executer.getResult(columnList, rowList));
+		assertEquals(columnList.size(), 1);
+		assertEquals(columnList.get(0), "ID");
+		expectedRowList = new ArrayList<String[]> () {{
+			add(new String[] {"10086"});
+		}};
+		rowListSize = rowList.size();
+		assertEquals(rowListSize, 1);
+		for (int i = 0; i < rowListSize; i++) {
+			assertArrayEquals(rowList.get(i).toArray(), expectedRowList.get(i));
+		}
+
+		// Test fourth select statement
+		columnList = new ArrayList<>();
+		rowList = new ArrayList<>();
+		executer.execute("SELECT  student.id  FROM  student WHERE  name = 'wyb'");
+		assertTrue(executer.getResult(columnList, rowList));
+		assertEquals(columnList.size(), 1);
+		assertEquals(columnList.get(0), "ID");
+		expectedRowList = new ArrayList<String[]> () {{
+			add(new String[] {"10086"});
+		}};
+		rowListSize = rowList.size();
+		assertEquals(rowListSize, 1);
+		for (int i = 0; i < rowListSize; i++) {
+			assertArrayEquals(rowList.get(i).toArray(), expectedRowList.get(i));
+		}
+
+		// Test fifth select statement
+		columnList = new ArrayList<>();
+		rowList = new ArrayList<>();
+		executer.execute("SELECT  student.id  FROM  student WHERE  name = 'wyb'");
+		assertTrue(executer.getResult(columnList, rowList));
+		assertEquals(columnList.size(), 1);
+		assertEquals(columnList.get(0), "ID");
+		expectedRowList = new ArrayList<String[]> () {{
+			add(new String[] {"10086"});
+		}};
+		rowListSize = rowList.size();
+		assertEquals(rowListSize, 1);
+		for (int i = 0; i < rowListSize; i++) {
+			assertArrayEquals(rowList.get(i).toArray(), expectedRowList.get(i));
+		}
 	}
 }
