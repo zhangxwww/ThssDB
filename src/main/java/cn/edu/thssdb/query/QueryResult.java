@@ -84,8 +84,16 @@ public class QueryResult {
     public List<Row> join(List<Row> r1, List<Row> r2) {
         List<Row> joinedRows = new ArrayList<>();
         for (Row r : r1) {
+            Entry e1 = r.getEntries().get(joinIndex1);
+            if (e1 == null) {
+                continue;
+            }
             for (Row rr : r2) {
-                if (r.getEntries().get(joinIndex1).equals(rr.getEntries().get(joinIndex2))) {
+                Entry e2 = r.getEntries().get(joinIndex2);
+                if (e2 == null){
+                    continue;
+                }
+                if (e1.equals(e2)) {
                     LinkedList<Row> tmp = new LinkedList<Row>() {{
                         add(r);
                         add(rr);
@@ -101,8 +109,16 @@ public class QueryResult {
         List<Row> joinedRows = new ArrayList<>();
         for (Row r : r1) {
             boolean found = false;
+            Entry e1 = r.getEntries().get(joinIndex1);
+            if (e1 == null) {
+                continue;
+            }
             for (Row rr : r2) {
-                if (r.getEntries().get(joinIndex1).equals(rr.getEntries().get(joinIndex2))) {
+                Entry e2 = r.getEntries().get(joinIndex2);
+                if (e2 == null) {
+                    continue;
+                }
+                if (e1.equals(e2)) {
                     LinkedList<Row> tmp = new LinkedList<Row>() {{
                         add(r);
                         add(rr);
@@ -113,7 +129,7 @@ public class QueryResult {
             }
             if (!found) {
                 Entry[] newEntries = new Entry[r2Width];
-                newEntries[joinIndex2] = r.getEntries().get(joinIndex1);
+                newEntries[joinIndex2] = e1;
                 LinkedList<Row> tmp = new LinkedList<Row>() {{
                     add(r);
                     add(new Row(newEntries));
@@ -128,8 +144,16 @@ public class QueryResult {
         List<Row> joinedRows = new ArrayList<>();
         for (Row rr : r2) {
             boolean found = false;
+            Entry e2 = rr.getEntries().get(joinIndex2);
+            if (e2 == null) {
+                continue;
+            }
             for (Row r : r1) {
-                if (rr.getEntries().get(joinIndex2).equals(r.getEntries().get(joinIndex1))) {
+                Entry e1 = r.getEntries().get(joinIndex1);
+                if (e1 == null) {
+                    continue;
+                }
+                if (e2.equals(e1)) {
                     LinkedList<Row> tmp = new LinkedList<Row>() {{
                         add(r);
                         add(rr);
@@ -140,7 +164,7 @@ public class QueryResult {
             }
             if (!found) {
                 Entry[] newEntries = new Entry[r1Width];
-                newEntries[joinIndex2] = rr.getEntries().get(joinIndex2);
+                newEntries[joinIndex1] = e2;
                 LinkedList<Row> tmp = new LinkedList<Row>() {{
                     add(new Row(newEntries));
                     add(rr);
