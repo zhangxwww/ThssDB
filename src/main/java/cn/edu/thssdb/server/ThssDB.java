@@ -67,7 +67,6 @@ public class ThssDB {
 
 	private static class ThssDBHolder {
 		private static final ThssDB INSTANCE = new ThssDB();
-
 		private ThssDBHolder() {
 
 		}

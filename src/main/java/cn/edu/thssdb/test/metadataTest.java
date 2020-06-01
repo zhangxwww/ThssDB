@@ -5,8 +5,10 @@ import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import com.sun.org.apache.xerces.internal.xs.StringList;
 
 import java.io.IOException;
+import java.util.*;
 
 public class metadataTest {
     public static void main(String[] args) throws IOException {
@@ -35,6 +37,9 @@ public class metadataTest {
         dbTHSS = m.switchDatabase("THSS");
 
         dbTHSS.quit();
+
+
+
 
     }
 }

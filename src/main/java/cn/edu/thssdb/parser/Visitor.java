@@ -131,8 +131,10 @@ public class Visitor extends SQLBaseVisitor {
 				tableName = tableNameContext.getText();
 			}
 			String attrName = c.column_name().getText();
-			results.set(i, new Pair<>(tableName, attrName));
+			results.add(new Pair<>(tableName, attrName));
+//			results.set(i, new Pair<>(tableName, attrName));
 		}
+
 
 		// from clause
 		List<SQLParser.Table_queryContext> tables = ctx.table_query();
