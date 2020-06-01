@@ -263,7 +263,7 @@ public class Client {
 
     private static void showTable(List<String> columns, List<List<String>> rows) {
         JFrame window = new JFrame("Result");
-        window.setDefaultCloseOperation(WindowConstants.EXIT_ON_CLOSE);
+        window.setDefaultCloseOperation(WindowConstants.DISPOSE_ON_CLOSE);
 
         Vector<String> cols = new Vector<>(columns);
 
