@@ -1,19 +1,8 @@
 package cn.edu.thssdb.test;
 
-import cn.edu.thssdb.parser.SQLBaseVisitor;
-import cn.edu.thssdb.parser.SQLLexer;
-import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.persist.NaiveSerializationPersist;
-import cn.edu.thssdb.persist.PageFilePersist;
-import cn.edu.thssdb.schema.*;
-import cn.edu.thssdb.type.ColumnType;
-import cn.edu.thssdb.utils.Global;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
 
 import java.io.*;
-import java.util.ArrayList;
 
 class Person implements Serializable {
     //手动定义序列号

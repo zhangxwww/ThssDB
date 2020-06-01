@@ -26,7 +26,8 @@ public class StatementAdapter {
     private static long transactionID;
     private LogHandler logHandler = null;
 
-    private Table resultTable = null;
+    private List<Column> resultHeader = null;
+    private List<Row> resultTable = null;
 
     public StatementAdapter(Database database, long sessionid) {
         this.database = database;
@@ -226,7 +227,7 @@ public class StatementAdapter {
     }
 
 
-    public Table select(List<Pair<String, String>> results, String table1, String table2, JoinCondition jc, WhereCondition wc) {
+    public void select(List<Pair<String, String>> results, String table1, String table2, JoinCondition jc, WhereCondition wc) {
         // TODO
         if (this.isInTransaction) {
             database.getTable(table1).getLock().readLock().lock();
@@ -259,15 +260,15 @@ public class StatementAdapter {
         // select哪些列
         List<Integer> index = getSelectIndex(results, table1, table2);
         List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType).query();
-        Table result = generateTmpTable(qResult, table1, table2, index);
+        generateTmpTable(qResult, table1, table2, index);
         if (this.isInTransaction) {
             database.getTable(table1).getLock().readLock().unlock();
             if (table2 != null && table2.length() > 0) {
                 database.getTable(table2).getLock().readLock().unlock();
             }
         }
-        resultTable = result;
-        return result;
+        //resultTable = result;
+        // return result;
     }
 
     private QueryTable getQueryTable(String table, WhereCondition wc) {
@@ -425,11 +426,10 @@ public class StatementAdapter {
         return false;
     }
 
-    private Table generateTmpTable(List<Row> rows, String t1, String t2, List<Integer> index) {
-        List<Column> newColumn = new ArrayList<>();
+    private void generateTmpTable(List<Row> rows, String t1, String t2, List<Integer> index) {
         List<String> attrs = new ArrayList<>();
         int midIndex = mergeAttrs(t1, t2, attrs);
-        Table table1, table2;
+        Table table1, table2 = null;
         List<Column> c1 = new ArrayList<>();
         List<Column> c2 = new ArrayList<>();
         table1 = database.getTable(t1);
@@ -438,23 +438,17 @@ public class StatementAdapter {
             table2 = database.getTable(t2);
             c2 = table2.getColumns();
         }
+
+        resultHeader = new ArrayList<>();
         for (int i : index) {
             if (i < midIndex) {
-                newColumn.add(new Column(c1.get(i)));
+                resultHeader.add(new Column(c1.get(i)));
             } else {
-                newColumn.add(new Column(c2.get(i - midIndex)));
+                resultHeader.add(new Column(c2.get(i - midIndex)));
             }
         }
-        int nCol = newColumn.size();
-        Column[] cArray = new Column[nCol];
-        for (int i = 0; i < nCol; ++i) {
-            cArray[i] = newColumn.get(i);
-        }
-        Table tmpTable = new Table("", "__TEMP", cArray, table1.primaryIndex);
-        for (Row r : rows) {
-            tmpTable.insert(r);
-        }
-        return tmpTable;
+
+        resultTable = rows;
     }
 
     private int mergeAttrs(String t1, String t2, List<String> mergedAttrs) {
@@ -497,8 +491,7 @@ public class StatementAdapter {
         if (resultTable == null) {
             return false;
         }
-        List<Column> cList = resultTable.getColumns();
-        for (Column c : cList) {
+        for (Column c : resultHeader) {
             columnList.add(c.getName());
         }
         for (Row row : resultTable) {
@@ -513,6 +506,7 @@ public class StatementAdapter {
             rowList.add(rr);
         }
         resultTable = null;
+        resultHeader = null;
         return true;
     }
 

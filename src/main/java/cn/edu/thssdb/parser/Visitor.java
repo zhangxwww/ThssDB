@@ -1,5 +1,6 @@
 package cn.edu.thssdb.parser;
 
+import cn.edu.thssdb.exception.SyntaxErrorException;
 import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.query.JoinCondition;
 import cn.edu.thssdb.query.WhereCondition;
@@ -147,9 +148,22 @@ public class Visitor extends SQLBaseVisitor {
 			// TODO: Exception Handle
 			table1 = tables.get(0).table_name().get(0).getText().toUpperCase();
 			table2 = tables.get(0).table_name().get(1).getText().toUpperCase();
+			// judge outer join
+			JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
+			if (tables.get(0).getChild(2).getText().toUpperCase().equals("OUTER")) {
+				if (tables.get(0).getChild(1).getText().toUpperCase().equals("LEFT")) {
+					joinType = JoinCondition.JoinType.LEFT_OUTER;
+				} else if (tables.get(0).getChild(1).getText().toUpperCase().equals("RIGHT")) {
+					joinType = JoinCondition.JoinType.RIGHT_OUTER;
+				} else {
+					// TODO: EXCEPTION HANDLE
+					throw new SyntaxErrorException();
+				}
+			}
 			SQLParser.Multiple_conditionContext joinConditionContext = tables.get(0).multiple_condition();
 			if (joinConditionContext != null) {
 				joinCondition = (JoinCondition) visitMultiple_condition(joinConditionContext);
+				joinCondition.type = joinType;
 			}
 		}
 

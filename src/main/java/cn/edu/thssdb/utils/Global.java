@@ -21,6 +21,7 @@ public class Global {
   public static final int NOT_NULL_ATTRIBUTE_ASSIGNED_NULL_EXCEPTION_CODE = 408;
   public static final int COLUMN_TYPE_WRONG_EXCEPTION_CODE = 409;
   public static final int STRING_VALUE_EXCEED_MAX_LENGTH_EXCEPTION_CODE = 410;
+  public static final int SYNTAX_ERROR_EXCEPTION_CODE = 411;
 
   public static String DEFAULT_SERVER_HOST = "127.0.0.1";
   public static int DEFAULT_SERVER_PORT = 6667;
