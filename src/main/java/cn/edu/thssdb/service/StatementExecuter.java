@@ -22,7 +22,7 @@ public class StatementExecuter {
 	private Database database;
 	private long sessionId;
 
-	StatementExecuter(Database db, long sessionId) {
+	public StatementExecuter(Database db, long sessionId) {
 		this.database = db;
 		this.sessionId = sessionId;
 		adapter = new StatementAdapter(this.database, this.sessionId);
