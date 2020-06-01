@@ -133,8 +133,12 @@ public class Table implements Iterable<Row> {
             ByteArrayInputStream bInStream = new ByteArrayInputStream(bData);
             ObjectInputStream ois = new ObjectInputStream(bInStream);
             while (true) {
-                Row o = (Row) ois.readObject();
-                rows.add(o);
+                try {
+                    Row o = (Row) ois.readObject();
+                    rows.add(o);
+                } catch (StreamCorruptedException ignored) {
+                    break;
+                }
             }
         } catch (EOFException e) {
             System.out.println("table deserialize中类对象已完全读入");

@@ -89,7 +89,7 @@ public class QueryResult {
                 continue;
             }
             for (Row rr : r2) {
-                Entry e2 = r.getEntries().get(joinIndex2);
+                Entry e2 = rr.getEntries().get(joinIndex2);
                 if (e2 == null){
                     continue;
                 }
@@ -114,7 +114,7 @@ public class QueryResult {
                 continue;
             }
             for (Row rr : r2) {
-                Entry e2 = r.getEntries().get(joinIndex2);
+                Entry e2 = rr.getEntries().get(joinIndex2);
                 if (e2 == null) {
                     continue;
                 }
