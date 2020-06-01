@@ -183,6 +183,15 @@ public class Client {
                 case Global.DUPLICATE_TABLE_NAME_EXCEPTION_CODE:
                     info = "Error: Duplicate table name";
                     break;
+                case Global.COLUMN_TYPE_WRONG_EXCEPTION_CODE:
+                    info = "Error: Column type wrong";
+                    break;
+                case Global.NOT_NULL_ATTRIBUTE_ASSIGNED_NULL_EXCEPTION_CODE:
+                    info = "Error: Not null attribute is assigned to null";
+                    break;
+                case Global.STRING_VALUE_EXCEED_MAX_LENGTH_EXCEPTION_CODE:
+                    info = "Error: String value exceeds max length";
+                    break;
                 default:
                     break;
             }

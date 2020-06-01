@@ -124,9 +124,17 @@ public class StatementAdapter {
                 for (int j = 0; j < attrNames.length; j++) {
                     if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
                         ColumnType attrType = tmpAttr.getType();
+                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength()) {
+                            // 检查value长度
+                            throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+                        }
                         e = parseValue(attrType, attrValues[j]);
                         break;
-                    }//为给出的属性值就为null
+                    }
+                }
+                if (tmpAttr.isNotNull() && e == null){
+                    //TODO 异常处理 不满足 NOTNULL 属性
+                    throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
                 }
                 entries[i] = e;
             }
@@ -286,23 +294,27 @@ public class StatementAdapter {
 
     private Entry parseValue(ColumnType type, String value) {
         Entry instant;
-        switch (type) {
-            case INT:
-                instant = new Entry(Integer.parseInt(value));
-                break;
-            case LONG:
-                instant = new Entry(Long.parseLong(value));
-                break;
-            case FLOAT:
-                instant = new Entry(Float.parseFloat(value));
-                break;
-            case DOUBLE:
-                instant = new Entry(Double.parseDouble(value));
-                break;
-            case STRING:
-            default:
-                instant = new Entry(value);
-                break;
+        try {
+            switch (type) {
+                case INT:
+                    instant = new Entry(Integer.parseInt(value));
+                    break;
+                case LONG:
+                    instant = new Entry(Long.parseLong(value));
+                    break;
+                case FLOAT:
+                    instant = new Entry(Float.parseFloat(value));
+                    break;
+                case DOUBLE:
+                    instant = new Entry(Double.parseDouble(value));
+                    break;
+                case STRING:
+                default:
+                    instant = new Entry(value);
+                    break;
+            }
+        } catch (NumberFormatException e) {
+            throw new ColumnTypeWrongException(value, type);
         }
         return instant;
     }

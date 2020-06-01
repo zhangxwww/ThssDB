@@ -48,14 +48,14 @@ public class test {
     }
 
     public static void main(String[] args) {
-        List<String> columnList = new ArrayList<String>();
-        columnList.add("ID");
-        columnList.add("NAME");
-        columnList.add("AGE");
-
-        List<List<String>> rowList = new ArrayList<>(0);
-        showTable(columnList,rowList);
-
+//        List<String> columnList = new ArrayList<String>();
+//        columnList.add("ID");
+//        columnList.add("NAME");
+//        columnList.add("AGE");
+//
+//        List<List<String>> rowList = new ArrayList<>(0);
+//        showTable(columnList,rowList);
+          Double.parseDouble("abc");
 //        String len = "insert into student(name) VALUES ('bob',15)";
 //        CharStream input = CharStreams.fromString(len);
 //        SQLLexer lexer = new SQLLexer(input);
