@@ -212,8 +212,14 @@ public class Visitor extends SQLBaseVisitor {
 	}
 
 	@Override
-	public Object visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+	public Object visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
+		// return super.visitShow_meta_stmt(ctx);
 		return null;
+	}
+
+	@Override
+	public Object visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+		return super.visitShow_table_stmt(ctx);
 	}
 }
 
