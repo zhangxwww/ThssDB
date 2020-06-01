@@ -522,7 +522,7 @@ public class StatementAdapter {
 
 
     public boolean getResult(List<String> columnList, List<List<String>> rowList) {
-        if (resultTable == null) {
+        if (resultTable == null && resultSchemaTable == null) {
             return false;
         }
         if (resultType == ResultType.TABLE) {
