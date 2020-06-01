@@ -82,6 +82,10 @@ public class StatementAdapter {
             for (int i = 0; i < attrs.size(); i++) {
                 Column tmpAttr = attrs.get(i);
                 ColumnType attrType = tmpAttr.getType();
+                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength()) {
+                    // 检查value长度
+                    throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+                }
                 entries[i] = parseValue(attrType, attrValues[i]);
             }
             t.insert(new Row(entries));
@@ -132,7 +136,7 @@ public class StatementAdapter {
                         break;
                     }
                 }
-                if (tmpAttr.isNotNull() && e == null){
+                if (tmpAttr.isNotNull() && e == null) {
                     //TODO 异常处理 不满足 NOTNULL 属性
                     throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
                 }
@@ -231,6 +235,7 @@ public class StatementAdapter {
         }
         QueryTable[] q;
         boolean needJoin;
+        JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
         int jIndex1 = -1, jIndex2 = -1;
         if (table2 == null || table2.equals("") || jc == null) {
             // 不需要join
@@ -247,11 +252,12 @@ public class StatementAdapter {
             List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
             jIndex1 = joinIndex.get(0);
             jIndex2 = joinIndex.get(1);
+            joinType = jc.type;
             needJoin = true;
         }
         // select哪些列
         List<Integer> index = getSelectIndex(results, table1, table2);
-        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2).query();
+        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType).query();
         Table result = generateTmpTable(qResult, table1, table2, index);
         if (this.isInTransaction) {
             database.getTable(table1).getLock().readLock().unlock();
@@ -501,7 +507,11 @@ public class StatementAdapter {
         for (Row row : resultTable) {
             List<String> rr = new ArrayList<>();
             for (Entry e : row.getEntries()) {
-                rr.add(e.toString());
+                if (e == null) {
+                    rr.add("null");
+                } else {
+                    rr.add(e.toString());
+                }
             }
             rowList.add(rr);
         }
