@@ -16,39 +16,41 @@ import java.util.Random;
 
 import cn.edu.thssdb.schema.*;
 
+import javax.naming.directory.AttributeInUseException;
+
 public class StatementAdapter {
     private Database database;
     private boolean isInTransaction = false;
     private List<Table> exclusiveLockedTables = new ArrayList<Table>();
 
-	private static long transactionID;
-	private LogHandler logHandler = null;
-	private long transactionId;
+    private static long transactionID;
+    private LogHandler logHandler = null;
+    private long transactionId;
 
-	private Table resultTable = null;
+    private Table resultTable = null;
 
-	public StatementAdapter(Database database, long sessionid) {
-		this.database = database;
-		this.transactionId = sessionid;
-		this.logHandler = new LogHandler(this.database);
-	}
+    public StatementAdapter(Database database, long sessionid) {
+        this.database = database;
+        this.transactionId = sessionid;
+        this.logHandler = new LogHandler(this.database);
+    }
 
-	public void initializeTransaction() {
-		this.isInTransaction = true;
-	}
+    public void initializeTransaction() {
+        this.isInTransaction = true;
+    }
 
     public void createTable(String tbName, Column[] cols) {
         database.createTable(tbName, cols);
-        if(isInTransaction) {
-            logHandler.addCreateTableLog(transactionID,tbName);
+        if (isInTransaction) {
+            logHandler.addCreateTableLog(transactionID, tbName);
         }
     }
 
     public void dropTable(String tbName) {
         //如果在事务处理中，就不能在这一步真的删除表
         if (isInTransaction) {
-            logHandler.addDropTableLog(transactionID,tbName);
-        }else{
+            logHandler.addDropTableLog(transactionID, tbName);
+        } else {
             database.dropTable(tbName);
         }
 
@@ -143,7 +145,7 @@ public class StatementAdapter {
         QueryTable q = getQueryTable(tbName, wherecond);
         while (q.hasNext()) {
             Row r = q.next();
-            if (isInTransaction){
+            if (isInTransaction) {
                 int attrNum = tableAttrsNum(tbName);
                 String[] attrValues = new String[attrNum];
                 for (int i = 0; i < attrNum; i++) {
@@ -201,9 +203,9 @@ public class StatementAdapter {
                 String primaryKeyName = t.getPrimaryKeyName();
                 if (primaryKeyName.toUpperCase().equals(colName)) {
                     //如果要update的正好是primaryKey
-                    logHandler.addInsertRowLog(transactionID,tbName,primaryKeyName,attrValue);
-                }else{
-                    logHandler.addInsertRowLog(transactionID,tbName,primaryKeyName,r.getEntry(t.getPrimaryKeyIndex()));
+                    logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValue);
+                } else {
+                    logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, r.getEntry(t.getPrimaryKeyIndex()));
                 }
             }
             t.update(attrIndex, e, r);
@@ -354,61 +356,19 @@ public class StatementAdapter {
 
     private List<Integer> getJoinIndex(String t1, String t2, JoinCondition jc) {
         List<Integer> results = new ArrayList<>();
-        List<String> attrs = new ArrayList<>();
-        int midIndex = mergeAttrs(t1, t2, attrs);
         ArrayList<Column> c1 = database.getTable(t1).getColumns();
         ArrayList<Column> c2 = database.getTable(t2).getColumns();
-        boolean found;
+        int index;
         if (jc.table1.equals(t1) && jc.table2.equals(t2)) {
-            found = false;
-            for (int i = 0; i < c1.size(); ++i) {
-                if (c1.get(i).getName().toUpperCase().equals(jc.attr1.toUpperCase())) {
-                    results.set(0, i);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                // TODO throw error: attr not in table
-                throw new AttrNotExistsException();
-            }
-            found = false;
-            for (int i = 0; i < c2.size(); ++i) {
-                if (c2.get(i).getName().toUpperCase().equals(jc.attr2.toUpperCase())) {
-                    results.set(1, i + midIndex);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                // TODO throw error: attr not in table
-                throw new AttrNotExistsException();
-            }
+            index = findAttrIndexInColumns(c1, jc.attr1);
+            results.add(index);
+            index = findAttrIndexInColumns(c2, jc.attr2);
+            results.add(index);
         } else if (jc.table1.toUpperCase().equals(t2.toUpperCase()) && jc.table2.toUpperCase().equals(t1.toUpperCase())) {
-            found = false;
-            for (int i = 0; i < c1.size(); ++i) {
-                if (c1.get(i).getName().toUpperCase().equals(jc.attr2.toUpperCase())) {
-                    results.set(0, i);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                // TODO throw error: attr not in table
-                throw new AttrNotExistsException();
-            }
-            found = false;
-            for (int i = 0; i < c2.size(); ++i) {
-                if (c2.get(i).getName().toUpperCase().equals(jc.attr1.toUpperCase())) {
-                    results.set(1, i + midIndex);
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                // TODO throw error: attr not in table
-                throw new AttrNotExistsException();
-            }
+            index = findAttrIndexInColumns(c1, jc.attr2);
+            results.add(index);
+            index = findAttrIndexInColumns(c2, jc.attr1);
+            results.add(index);
         } else {
             // TODO throw error: table name can't match
             throw new TableNotExistsException();
@@ -505,18 +465,18 @@ public class StatementAdapter {
         return this.isInTransaction;
     }
 
-	void terminateTransaction() {
-		for (Table t : this.exclusiveLockedTables) {
-			t.getLock().writeLock().unlock();
-		}
-		this.exclusiveLockedTables.clear();
-		this.isInTransaction = false;
-	}
+    void terminateTransaction() {
+        for (Table t : this.exclusiveLockedTables) {
+            t.getLock().writeLock().unlock();
+        }
+        this.exclusiveLockedTables.clear();
+        this.isInTransaction = false;
+    }
 
-	void writeLog(String content) {
-		String logText = String.valueOf(this.transactionId) + " " + content;
-		this.logHandler.writeWAL(logText);
-	}
+    void writeLog(String content) {
+        String logText = String.valueOf(this.transactionId) + " " + content;
+        this.logHandler.writeWAL(logText);
+    }
 
     public boolean getResult(List<String> columnList, List<List<String>> rowList) {
         if (resultTable == null) {
@@ -533,7 +493,16 @@ public class StatementAdapter {
             }
             rowList.add(rr);
         }
-	    resultTable = null;
+        resultTable = null;
         return true;
+    }
+
+    private int findAttrIndexInColumns(List<Column> columns, String attr) {
+        for (int i = 0; i < columns.size(); ++i) {
+            if (columns.get(i).getName().toUpperCase().equals(attr.toUpperCase())) {
+                return i;
+            }
+        }
+        throw new AttrNotExistsException();
     }
 }
