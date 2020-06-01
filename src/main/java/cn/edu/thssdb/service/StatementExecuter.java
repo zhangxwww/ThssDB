@@ -22,7 +22,7 @@ public class StatementExecuter {
 	private Database database;
 	private long sessionId;
 
-	StatementExecuter(Database db, long sessionId) {
+	public StatementExecuter(Database db, long sessionId) {
 		this.database = db;
 		this.sessionId = sessionId;
 		adapter = new StatementAdapter(this.database, this.sessionId);
@@ -57,5 +57,11 @@ public class StatementExecuter {
 	public boolean getResult(List<String> columnList, List<List<String>> rowList) {
 		// TODO
 		return adapter.getResult(columnList, rowList);
+	}
+
+	public void batchExecute(List<String> statements) {
+		for (String statement: statements) {
+			this.execute(statement);
+		}
 	}
 }

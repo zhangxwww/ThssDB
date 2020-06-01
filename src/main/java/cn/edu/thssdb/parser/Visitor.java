@@ -37,8 +37,7 @@ public class Visitor extends SQLBaseVisitor {
 			int length = -1;
 			int isPrimary = 0;
 			boolean notNull = false;
-			if (constraints.size() == 2 && constraints.get(0).getText().toUpperCase().equals("NOT") &&
-					constraints.get(1).getText().toUpperCase().equals("NULL")) {
+			if (constraints.size() > 0 && constraints.get(0).getText().toUpperCase().equals("NOTNULL")) {
 				notNull = true;
 			}
 			if (typeName.startsWith("STRING")) {
