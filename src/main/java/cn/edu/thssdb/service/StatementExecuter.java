@@ -58,4 +58,10 @@ public class StatementExecuter {
 		// TODO
 		return adapter.getResult(columnList, rowList);
 	}
+
+	public void batchExecute(List<String> statements) {
+		for (String statement: statements) {
+			this.execute(statement);
+		}
+	}
 }
