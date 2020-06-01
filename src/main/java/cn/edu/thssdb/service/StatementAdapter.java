@@ -260,11 +260,15 @@ public class StatementAdapter {
             AttrCompare compare = new AttrCompare(wc.op);
             String attr = wc.attr;
             ColumnType cType = null;
+            boolean found = false;
             for (Column c : t.getColumns()) {
                 if (c.getName().toUpperCase().equals(attr.toUpperCase())) {
                     cType = c.getType();
+                    found = true;
                     break;
                 }
+            }
+            if (!found) {
                 // TODO throw error: attr not in columns
                 throw new AttrNotExistsException();
             }
@@ -462,7 +466,12 @@ public class StatementAdapter {
                 newColumn.add(new Column(c2.get(i - midIndex)));
             }
         }
-        Table tmpTable = new Table("", "__TEMP", (Column[]) newColumn.toArray(), table1.primaryIndex);
+        int nCol = newColumn.size();
+        Column[] cArray = new Column[nCol];
+        for (int i = 0; i < nCol; ++i) {
+            cArray[i] = newColumn.get(i);
+        }
+        Table tmpTable = new Table("", "__TEMP", cArray, table1.primaryIndex);
         for (Row r : rows) {
             tmpTable.insert(r);
         }

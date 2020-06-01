@@ -39,6 +39,7 @@ public class QueryTable implements Iterator<Row> {
 
     public QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
         needWhere = attrCompare != null;
+        iterator = table.iterator();
         if (needWhere) {
             this.attrCompare = attrCompare;
             List<Column> columns = table.getColumns();

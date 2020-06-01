@@ -23,7 +23,7 @@ public class Visitor extends SQLBaseVisitor {
 	@Override
 	public Object visitCreate_table_stmt(SQLParser.Create_table_stmtContext ctx) {
 
-		String tableName = ctx.table_name().getText();
+		String tableName = ctx.table_name().getText().toUpperCase();
 		List<SQLParser.Column_defContext> rawCols = ctx.column_def();
 		Column[] cols = new Column[rawCols.size()];
 		String primary = ctx.table_constraint().column_name(0).getText().toUpperCase();
@@ -32,7 +32,7 @@ public class Visitor extends SQLBaseVisitor {
 			List<SQLParser.Column_constraintContext> constraints = c.column_constraint();
 
 			String typeName = c.type_name().getText().toUpperCase();
-			String colName = c.column_name().getText();
+			String colName = c.column_name().getText().toUpperCase();
 			ColumnType type;
 			int length = -1;
 			int isPrimary = 0;
@@ -58,7 +58,7 @@ public class Visitor extends SQLBaseVisitor {
 
 	@Override
 	public Object visitDrop_table_stmt(SQLParser.Drop_table_stmtContext ctx) {
-		String tableName = ctx.table_name().getText();
+		String tableName = ctx.table_name().getText().toUpperCase();
 		statementAdapter.dropTable(tableName);
 		return null;
 	}
@@ -66,7 +66,7 @@ public class Visitor extends SQLBaseVisitor {
 	@Override
 	public Object visitInsert_stmt(SQLParser.Insert_stmtContext ctx) {
 		//如果没有column name, 说明是插入整行，所以需要获取表的columns信息
-		String tableName = ctx.table_name().getText();
+		String tableName = ctx.table_name().getText().toUpperCase();
 		List<SQLParser.Column_nameContext> colNames = ctx.column_name();
 		List<SQLParser.Literal_valueContext> values = ctx.value_entry(0).literal_value();
 
@@ -101,7 +101,7 @@ public class Visitor extends SQLBaseVisitor {
 
 	@Override
 	public Object visitDelete_stmt(SQLParser.Delete_stmtContext ctx) {
-		String tableName = ctx.table_name().getText();
+		String tableName = ctx.table_name().getText().toUpperCase();
 		WhereCondition wherecond = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
 		statementAdapter.delFromTable(tableName, wherecond);
 		return null;
@@ -109,8 +109,8 @@ public class Visitor extends SQLBaseVisitor {
 
 	@Override
 	public Object visitUpdate_stmt(SQLParser.Update_stmtContext ctx) {
-		String tableName = ctx.table_name().getText();
-		String colName = ctx.column_name().getText();
+		String tableName = ctx.table_name().getText().toUpperCase();
+		String colName = ctx.column_name().getText().toUpperCase();
 		String attrValue = ctx.expression().getText();
 		WhereCondition wherecond = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
 		statementAdapter.updateTable(tableName, colName, attrValue, wherecond);
@@ -131,7 +131,7 @@ public class Visitor extends SQLBaseVisitor {
 				tableName = tableNameContext.getText();
 			}
 			String attrName = c.column_name().getText();
-			results.add(new Pair<>(tableName, attrName));
+			results.add(new Pair<>(tableName.toUpperCase(), attrName.toUpperCase()));
 //			results.set(i, new Pair<>(tableName, attrName));
 		}
 
@@ -143,11 +143,11 @@ public class Visitor extends SQLBaseVisitor {
 		String table2 = "";
 		int numTables = tables.size();
 		if (numTables == 1) {
-			table1 = tables.get(0).table_name().get(0).getText();
+			table1 = tables.get(0).table_name().get(0).getText().toUpperCase();
 		} else {
 			// TODO: Exception Handle
-			table1 = tables.get(0).table_name().get(0).getText();
-			table2 = tables.get(1).table_name().get(0).getText();
+			table1 = tables.get(0).table_name().get(0).getText().toUpperCase();
+			table2 = tables.get(1).table_name().get(0).getText().toUpperCase();
 			SQLParser.Multiple_conditionContext joinConditionContext = tables.get(2).multiple_condition();
 			if (joinConditionContext != null) {
 				joinCondition = (JoinCondition) visitMultiple_condition(joinConditionContext);
@@ -176,9 +176,9 @@ public class Visitor extends SQLBaseVisitor {
 		SQLParser.Column_full_nameContext attrContext1 = exp1.comparer().column_full_name();
 		String tableName1 = "";
 		if (attrContext1.table_name() != null) {
-			tableName1 = attrContext1.table_name().getText();
+			tableName1 = attrContext1.table_name().getText().toUpperCase();
 		}
-		String columnName1 = attrContext1.column_name().getText();
+		String columnName1 = attrContext1.column_name().getText().toUpperCase();
 
 		// Second Comparer
 		SQLParser.Literal_valueContext literal = exp2.comparer().literal_value();
@@ -190,10 +190,10 @@ public class Visitor extends SQLBaseVisitor {
 			// join condition
 			SQLParser.Column_full_nameContext attrContext2 = exp1.comparer().column_full_name();
 			String tableName2 = "";
-			if (attrContext1.table_name() != null) {
-				tableName2 = attrContext1.table_name().getText();
+			if (attrContext2.table_name() != null) {
+				tableName2 = attrContext2.table_name().getText().toUpperCase();
 			}
-			String columnName2 = attrContext1.column_name().getText();
+			String columnName2 = attrContext2.column_name().getText().toUpperCase();
 			return new JoinCondition(operator, tableName1, tableName2, columnName1, columnName2);
 		}
 	}

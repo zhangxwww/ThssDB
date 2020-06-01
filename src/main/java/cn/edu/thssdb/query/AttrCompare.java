@@ -13,7 +13,7 @@ enum CompareType {
             put("<=",LE);
             put(">",GT);
             put(">=",GE);
-            put("==",EQ);
+            put("=",EQ);
             put("<>",NE);
         }
     };
