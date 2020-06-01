@@ -88,5 +88,7 @@ public class QueryTest {
 		}};
 		executer.batchExecute(testStatements);
 		Table studentTable = database.getTable("STUDENT");
+		Table gpaTable = database.getTable("GPA");
+
 	}
 }
