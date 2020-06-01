@@ -20,6 +20,7 @@ public class QueryResult {
     private boolean needJoin = false;
     // join on 哪些列
     private int joinIndex1, joinIndex2;
+    private JoinCondition.JoinType joinType;
     private QueryTable[] queryTables;
 
     public QueryResult(QueryTable[] queryTables, List<Integer> index, boolean needJoin, int joinIndex1, int joinIndex2) {
@@ -30,6 +31,16 @@ public class QueryResult {
         this.joinIndex2 = joinIndex2;
         this.attrs = new ArrayList<>();
         this.queryTables = queryTables;
+        this.joinType = JoinCondition.JoinType.INNER;
+    }
+
+    public QueryResult(QueryTable[] queryTables,
+                       List<Integer> index,
+                       boolean needJoin,
+                       int joinIndex1, int joinIndex2,
+                       JoinCondition.JoinType type) {
+        this(queryTables, index, needJoin, joinIndex1, joinIndex2);
+        this.joinType = type;
     }
 
     public List<Row> query() {
@@ -43,7 +54,20 @@ public class QueryResult {
                     rowLists.get(i).add(queryTables[i].next());
                 }
             }
-            result = join(rowLists.get(0), rowLists.get(1));
+            switch (joinType) {
+                case INNER:
+                    result = join(rowLists.get(0), rowLists.get(1));
+                    break;
+                case LEFT_OUTER:
+                    result = leftOuterJoin(rowLists.get(0), rowLists.get(1), queryTables[1].getWidth());
+                    break;
+                case RIGHT_OUTER:
+                    result = rightOuterJoin(rowLists.get(0), rowLists.get(1), queryTables[0].getWidth());
+                    break;
+                default:
+                    result = new ArrayList<>();
+                    break;
+            }
         } else {
             result = new ArrayList<>();
             while (queryTables[0].hasNext()) {
@@ -58,20 +82,70 @@ public class QueryResult {
     }
 
     public List<Row> join(List<Row> r1, List<Row> r2) {
-        int l1 = r1.size();
-        int l2 = r2.size();
         List<Row> joinedRows = new ArrayList<>();
-        for (int i = 0; i < l1; ++i) {
-            for (int j = 0; j < l2; ++j) {
-                Row row1 = r1.get(i);
-                Row row2 = r2.get(j);
-                if (row1.getEntries().get(joinIndex1).equals(row2.getEntries().get(joinIndex2))) {
+        for (Row r : r1) {
+            for (Row rr : r2) {
+                if (r.getEntries().get(joinIndex1).equals(rr.getEntries().get(joinIndex2))) {
                     LinkedList<Row> tmp = new LinkedList<Row>() {{
-                        add(row1);
-                        add(row2);
+                        add(r);
+                        add(rr);
                     }};
                     joinedRows.add(combineRow(tmp));
                 }
+            }
+        }
+        return joinedRows;
+    }
+
+    public List<Row> leftOuterJoin(List<Row> r1, List<Row> r2, int r2Width) {
+        List<Row> joinedRows = new ArrayList<>();
+        for (Row r : r1) {
+            boolean found = false;
+            for (Row rr : r2) {
+                if (r.getEntries().get(joinIndex1).equals(rr.getEntries().get(joinIndex2))) {
+                    LinkedList<Row> tmp = new LinkedList<Row>() {{
+                        add(r);
+                        add(rr);
+                    }};
+                    joinedRows.add(combineRow(tmp));
+                    found = true;
+                }
+            }
+            if (!found) {
+                Entry[] newEntries = new Entry[r2Width];
+                newEntries[joinIndex2] = r.getEntries().get(joinIndex1);
+                LinkedList<Row> tmp = new LinkedList<Row>() {{
+                    add(r);
+                    add(new Row(newEntries));
+                }};
+                joinedRows.add(combineRow(tmp));
+            }
+        }
+        return joinedRows;
+    }
+
+    public List<Row> rightOuterJoin(List<Row> r1, List<Row> r2, int r1Width) {
+        List<Row> joinedRows = new ArrayList<>();
+        for (Row rr : r2) {
+            boolean found = false;
+            for (Row r : r1) {
+                if (rr.getEntries().get(joinIndex2).equals(r.getEntries().get(joinIndex1))) {
+                    LinkedList<Row> tmp = new LinkedList<Row>() {{
+                        add(r);
+                        add(rr);
+                    }};
+                    joinedRows.add(combineRow(tmp));
+                    found = true;
+                }
+            }
+            if (!found) {
+                Entry[] newEntries = new Entry[r1Width];
+                newEntries[joinIndex2] = rr.getEntries().get(joinIndex2);
+                LinkedList<Row> tmp = new LinkedList<Row>() {{
+                    add(new Row(newEntries));
+                    add(rr);
+                }};
+                joinedRows.add(combineRow(tmp));
             }
         }
         return joinedRows;
