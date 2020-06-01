@@ -141,14 +141,14 @@ public class Visitor extends SQLBaseVisitor {
 		JoinCondition joinCondition = null;
 		String table1 = "";
 		String table2 = "";
-		int numTables = tables.size();
+		int numTables = tables.get(0).table_name().size();
 		if (numTables == 1) {
 			table1 = tables.get(0).table_name().get(0).getText().toUpperCase();
 		} else {
 			// TODO: Exception Handle
 			table1 = tables.get(0).table_name().get(0).getText().toUpperCase();
-			table2 = tables.get(1).table_name().get(0).getText().toUpperCase();
-			SQLParser.Multiple_conditionContext joinConditionContext = tables.get(2).multiple_condition();
+			table2 = tables.get(0).table_name().get(1).getText().toUpperCase();
+			SQLParser.Multiple_conditionContext joinConditionContext = tables.get(0).multiple_condition();
 			if (joinConditionContext != null) {
 				joinCondition = (JoinCondition) visitMultiple_condition(joinConditionContext);
 			}
@@ -188,7 +188,7 @@ public class Visitor extends SQLBaseVisitor {
 			return new WhereCondition(operator, tableName1, columnName1, value);
 		} else {
 			// join condition
-			SQLParser.Column_full_nameContext attrContext2 = exp1.comparer().column_full_name();
+			SQLParser.Column_full_nameContext attrContext2 = exp2.comparer().column_full_name();
 			String tableName2 = "";
 			if (attrContext2.table_name() != null) {
 				tableName2 = attrContext2.table_name().getText().toUpperCase();

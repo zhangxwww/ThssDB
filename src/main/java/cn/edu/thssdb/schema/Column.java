@@ -41,6 +41,14 @@ public class Column implements Comparable<Column>, Serializable {
         return type;
     }
 
+    public boolean isNotNull() {
+        return this.notNull;
+    }
+
+    public int getMaxLength() {
+        return maxLength;
+    }
+
     @Override
     public int compareTo(Column e) {
         return name.compareTo(e.name);

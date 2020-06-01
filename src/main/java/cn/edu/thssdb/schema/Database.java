@@ -100,6 +100,7 @@ public class Database {
         try {
             if (!tables.containsKey(tbName)) {
                 System.out.println("Table " + tbName + " not exists");
+                throw new TableNotExistsException();
             } else {
                 //把磁盘文件删除
                 int frameNum = persistManager.tableFramesNum.get(tbName);

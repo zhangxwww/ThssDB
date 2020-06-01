@@ -109,6 +109,14 @@ public class IServiceHandler implements IService.Iface {
                 code = e.code();
             } catch (KeyNotExistException e) {
                 code = e.code();
+            } catch (DuplicateTableNameException e) {
+                code = e.code();
+            } catch (StringValueExceedLengthException e) {
+                code = e.code();
+            } catch (ColumnTypeWrongException e) {
+                code = e.code();
+            } catch (NotNullAttributeAssignedNullException e) {
+                code = e.code();
             }
             resp.setStatus(new Status(code));
             resp.setIsAbort(isAbort);

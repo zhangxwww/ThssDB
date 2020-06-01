@@ -83,7 +83,12 @@ public class QueryResult {
         for (Row r : rows) {
             entries.addAll(r.getEntries());
         }
-        return new Row((Entry[]) entries.toArray());
+        int nEntries = entries.size();
+        Entry[] es = new Entry[nEntries];
+        for (int i = 0; i < nEntries; ++i) {
+            es[i] = entries.get(i);
+        }
+        return new Row(es);
     }
 
     public Row generateQueryRecord(Row row) {
