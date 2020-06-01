@@ -16,7 +16,7 @@ import java.util.*;
 public class IServiceHandler implements IService.Iface {
 
     private Set<Long> connected_sessionid = new HashSet<>();
-    private HashMap<Long, StatementExecuter> executerList;
+    private HashMap<Long, StatementExecuter> executerList = new HashMap<>();
     private Database database;
 
     public IServiceHandler(Database db) {
