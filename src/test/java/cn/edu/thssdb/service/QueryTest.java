@@ -1,4 +1,4 @@
-package cn.edu.thssdb.index;
+package cn.edu.thssdb.service;
 import cn.edu.thssdb.schema.*;
 import cn.edu.thssdb.service.StatementExecuter;
 import cn.edu.thssdb.type.ColumnType;
@@ -64,6 +64,7 @@ public class QueryTest {
 					break;
 				default:
 					fail();
+					break;
 			}
 			i += 1;
 		}
@@ -75,7 +76,7 @@ public class QueryTest {
 		manager.createDatabaseIfNotExists("UnitTest");
 		Database database = manager.switchDatabase("UnitTest");
 		StatementExecuter executer = new StatementExecuter(database, 43);
-		
+
 		List<String> testStatements = new ArrayList<String>() {{
 			add("create table student(ID  int, name String(24), PRIMARY Key(id));");
 			add("INSERT INTO student VALUES (010136, 'myq');");
