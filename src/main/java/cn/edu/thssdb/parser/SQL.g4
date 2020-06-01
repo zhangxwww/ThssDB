@@ -68,7 +68,7 @@ quit_stmt :
     K_QUIT;
 
 show_table_stmt :
-    K_SHOW K_DATABASE database_name;
+    K_SHOW K_TABLE table_name;
 
 insert_stmt :
     K_INSERT K_INTO table_name ( '(' column_name ( ',' column_name )* ')' )?

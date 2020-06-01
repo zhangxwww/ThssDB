@@ -196,5 +196,10 @@ public class Visitor extends SQLBaseVisitor {
 			return new JoinCondition(operator, tableName1, tableName2, columnName1, columnName2);
 		}
 	}
+
+	@Override
+	public Object visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+		return null;
+	}
 }
 

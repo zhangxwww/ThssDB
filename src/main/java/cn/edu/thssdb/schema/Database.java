@@ -283,4 +283,8 @@ public class Database {
             e.printStackTrace();
         }
     }
+
+    public int getTableNum(){
+        return tableInfos.size();
+    }
 }

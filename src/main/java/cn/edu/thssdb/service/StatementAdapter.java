@@ -25,13 +25,12 @@ public class StatementAdapter {
 
     private static long transactionID;
     private LogHandler logHandler = null;
-    private long transactionId;
 
     private Table resultTable = null;
 
     public StatementAdapter(Database database, long sessionid) {
         this.database = database;
-        this.transactionId = sessionid;
+        this.transactionID = sessionid;
         this.logHandler = new LogHandler(this.database);
     }
 
@@ -75,6 +74,8 @@ public class StatementAdapter {
             if (this.isInTransaction) {
                 t.getLock().writeLock().lock();
                 this.exclusiveLockedTables.add(t);
+                System.out.println("isIntransaction:" + String.valueOf(isInTransaction));
+
                 logHandler.addInsertRowLog(transactionID, tbName, t.getPrimaryKeyName(), attrValues[t.getPrimaryKeyIndex()]);
             }
             ArrayList<Column> attrs = t.getColumns();
@@ -491,10 +492,6 @@ public class StatementAdapter {
         this.isInTransaction = false;
     }
 
-    void writeLog(String content) {
-        String logText = String.valueOf(this.transactionId) + " " + content;
-        this.logHandler.writeWAL(logText);
-    }
 
     public boolean getResult(List<String> columnList, List<List<String>> rowList) {
         if (resultTable == null) {
