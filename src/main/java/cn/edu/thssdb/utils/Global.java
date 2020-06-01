@@ -17,6 +17,7 @@ public class Global {
   public static final int TABLE_NOT_EXISTS_EXCEPTION_CODE = 404;
   public static final int DUPLICATE_KEY_EXCEPTION_CODE = 405;
   public static final int KEY_NOT_EXIST_EXCEPTION_CODE = 406;
+  public static final int DUPLICATE_TABLE_NAME_EXCEPTION_CODE = 407;
 
   public static String DEFAULT_SERVER_HOST = "127.0.0.1";
   public static int DEFAULT_SERVER_PORT = 6667;

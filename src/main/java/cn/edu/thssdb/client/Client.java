@@ -180,6 +180,9 @@ public class Client {
                 case Global.KEY_NOT_EXIST_EXCEPTION_CODE:
                     info = "Error: Key not exist";
                     break;
+                case Global.DUPLICATE_TABLE_NAME_EXCEPTION_CODE:
+                    info = "Error: Duplicate table name";
+                    break;
                 default:
                     break;
             }
