@@ -6,6 +6,7 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import javafx.scene.control.Tab;
 import javafx.util.Pair;
 
 import java.io.*;
@@ -29,6 +30,14 @@ public class StatementAdapter {
 
     private List<Column> resultHeader = null;
     private List<Row> resultTable = null;
+    private ResultType resultType = null;
+    private List<String> resultSchemaHeader = null;
+    private List<List<String>> resultSchemaTable = null;
+
+    private enum ResultType {
+        TABLE,
+        SCHEMA
+    }
 
     public StatementAdapter(Database database, long sessionid) {
         this.database = database;
@@ -55,6 +64,32 @@ public class StatementAdapter {
             database.dropTable(tbName);
         }
 
+    }
+
+    public void showTable(String tbName) {
+        Table t = database.getTable(tbName);
+        resultSchemaHeader = new ArrayList<String>() {{
+            add("NAME");
+            add("TYPE");
+            add("PRIMARY");
+            add("NOT NULL");
+            add("MAX LENGTH");
+        }};
+        resultSchemaTable = new ArrayList<>();
+        for (Column c : t.getColumns()) {
+            List<String> info = new ArrayList<>();
+            info.add(c.getName());
+            info.add(c.getType().toString());
+            info.add(String.valueOf(c.isPrimary()));
+            info.add(String.valueOf(c.isNotNull()));
+            String maxLength = c.getType() == ColumnType.STRING ?
+                    String.valueOf(c.getMaxLength())
+                    : "-";
+            info.add(maxLength);
+            resultSchemaTable.add(info);
+        }
+
+        resultType = ResultType.SCHEMA;
     }
 
     public int tableAttrsNum(String tbName) {
@@ -266,8 +301,7 @@ public class StatementAdapter {
                 database.getTable(table2).getLock().readLock().unlock();
             }
         }
-        //resultTable = result;
-        // return result;
+        resultType = ResultType.TABLE;
     }
 
     private QueryTable getQueryTable(String table, WhereCondition wc) {
@@ -494,22 +528,29 @@ public class StatementAdapter {
         if (resultTable == null) {
             return false;
         }
-        for (Column c : resultHeader) {
-            columnList.add(c.getName());
-        }
-        for (Row row : resultTable) {
-            List<String> rr = new ArrayList<>();
-            for (Entry e : row.getEntries()) {
-                if (e == null) {
-                    rr.add("null");
-                } else {
-                    rr.add(e.toString());
-                }
+        if (resultType == ResultType.TABLE) {
+            for (Column c : resultHeader) {
+                columnList.add(c.getName());
             }
-            rowList.add(rr);
+            for (Row row : resultTable) {
+                List<String> rr = new ArrayList<>();
+                for (Entry e : row.getEntries()) {
+                    if (e == null) {
+                        rr.add("null");
+                    } else {
+                        rr.add(e.toString());
+                    }
+                }
+                rowList.add(rr);
+            }
+            resultTable = null;
+            resultHeader = null;
+        } else {
+            columnList.addAll(resultSchemaHeader);
+            rowList.addAll(resultSchemaTable);
+            resultSchemaTable = null;
+            resultSchemaHeader = null;
         }
-        resultTable = null;
-        resultHeader = null;
         return true;
     }
 
