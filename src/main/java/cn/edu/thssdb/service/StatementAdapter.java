@@ -82,6 +82,10 @@ public class StatementAdapter {
             for (int i = 0; i < attrs.size(); i++) {
                 Column tmpAttr = attrs.get(i);
                 ColumnType attrType = tmpAttr.getType();
+                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength()) {
+                    // 检查value长度
+                    throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+                }
                 entries[i] = parseValue(attrType, attrValues[i]);
             }
             t.insert(new Row(entries));
@@ -132,7 +136,7 @@ public class StatementAdapter {
                         break;
                     }
                 }
-                if (tmpAttr.isNotNull() && e == null){
+                if (tmpAttr.isNotNull() && e == null) {
                     //TODO 异常处理 不满足 NOTNULL 属性
                     throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
                 }
@@ -501,7 +505,11 @@ public class StatementAdapter {
         for (Row row : resultTable) {
             List<String> rr = new ArrayList<>();
             for (Entry e : row.getEntries()) {
-                rr.add(e.toString());
+                if (e == null) {
+                    rr.add("null");
+                } else {
+                    rr.add(e.toString());
+                }
             }
             rowList.add(rr);
         }

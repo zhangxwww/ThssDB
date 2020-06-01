@@ -55,7 +55,10 @@ public class test {
 //
 //        List<List<String>> rowList = new ArrayList<>(0);
 //        showTable(columnList,rowList);
-          Double.parseDouble("abc");
+        System.out.println(null == null);
+        System.out.println(null != null);
+
+        Double.parseDouble("abc");
 //        String len = "insert into student(name) VALUES ('bob',15)";
 //        CharStream input = CharStreams.fromString(len);
 //        SQLLexer lexer = new SQLLexer(input);
