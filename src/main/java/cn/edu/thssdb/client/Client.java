@@ -192,6 +192,9 @@ public class Client {
                 case Global.STRING_VALUE_EXCEED_MAX_LENGTH_EXCEPTION_CODE:
                     info = "Error: String value exceeds max length";
                     break;
+                case Global.SYNTAX_ERROR_EXCEPTION_CODE:
+                    info = "Error: Syntax error";
+                    break;
                 default:
                     break;
             }

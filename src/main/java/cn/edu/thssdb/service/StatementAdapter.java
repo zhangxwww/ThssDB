@@ -16,8 +16,10 @@ import java.util.List;
 import java.util.Random;
 
 import cn.edu.thssdb.schema.*;
+import org.w3c.dom.Attr;
 
 import javax.naming.directory.AttributeInUseException;
+import javax.swing.text.html.MinimalHTMLWriter;
 
 public class StatementAdapter {
     private Database database;
@@ -73,6 +75,7 @@ public class StatementAdapter {
             add("PRIMARY");
             add("NOT NULL");
             add("MAX LENGTH");
+            add("UNIQUE");
         }};
         resultSchemaTable = new ArrayList<>();
         for (Column c : t.getColumns()) {
@@ -85,6 +88,7 @@ public class StatementAdapter {
                     String.valueOf(c.getMaxLength())
                     : "-";
             info.add(maxLength);
+            info.add(String.valueOf(c.isUnique()));
             resultSchemaTable.add(info);
         }
 
@@ -262,7 +266,12 @@ public class StatementAdapter {
     }
 
 
-    public void select(List<Pair<String, String>> results, String table1, String table2, JoinCondition jc, WhereCondition wc) {
+    public void select(List<Pair<String, String>> results,
+                       String table1, String table2,
+                       JoinCondition jc,
+                       WhereCondition wc,
+                       boolean distinct,
+                       OrderBy ob) {
         // TODO
         if (this.isInTransaction) {
             database.getTable(table1).getLock().readLock().lock();
@@ -294,7 +303,17 @@ public class StatementAdapter {
         }
         // select哪些列
         List<Integer> index = getSelectIndex(results, table1, table2);
-        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType).query();
+        // Order by
+        int orderByIndex;
+        boolean desc;
+        if (ob != null) {
+            orderByIndex = getOrderByIndex(table1, table2, ob, index);
+            desc = ob.desc;
+        } else {
+            orderByIndex = -1;
+            desc = false;
+        }
+        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType, orderByIndex, desc, distinct).query();
         generateTmpTable(qResult, table1, table2, index);
         if (this.isInTransaction) {
             database.getTable(table1).getLock().readLock().unlock();
@@ -428,6 +447,41 @@ public class StatementAdapter {
             throw new TableNotExistsException();
         }
         return results;
+    }
+
+    private int getOrderByIndex(String t1, String t2, OrderBy ob, List<Integer> selectIndex) {
+        List<String> attrs = new ArrayList<>();
+        int midIndex = mergeAttrs(t1, t2, attrs);
+        if (ob.tableName.equals("")) {
+            for (int index : selectIndex) {
+                if (attrs.get(index).equals(ob.attr)) {
+                    return index;
+                }
+            }
+            throw new AttrNotExistsException();
+        } else if (ob.tableName.equals(t1)) {
+            for (int index : selectIndex) {
+                if (index >= midIndex) {
+                    break;
+                }
+                if (attrs.get(index).equals(ob.attr)) {
+                    return index;
+                }
+            }
+            throw new AttrNotExistsException();
+        } else if (ob.tableName.equals(t2)) {
+            for (int index : selectIndex) {
+                if (index < midIndex) {
+                    break;
+                }
+                if (attrs.get(index).equals(ob.attr)) {
+                    return index;
+                }
+            }
+            throw new AttrNotExistsException();
+        } else {
+            throw new TableNotExistsException();
+        }
     }
 
     private boolean checkAmbiguousColumnForWhere(String t1, String t2, WhereCondition wc) {

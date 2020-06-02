@@ -4,9 +4,7 @@ import cn.edu.thssdb.schema.Entry;
 import cn.edu.thssdb.schema.Row;
 
 import java.lang.reflect.Array;
-import java.util.ArrayList;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 
 import cn.edu.thssdb.schema.Table;
 import javafx.scene.control.Cell;
@@ -23,6 +21,10 @@ public class QueryResult {
     private JoinCondition.JoinType joinType;
     private QueryTable[] queryTables;
 
+    private int orderByIndex;
+    private boolean desc;
+    private boolean distinct;
+
     public QueryResult(QueryTable[] queryTables, List<Integer> index, boolean needJoin, int joinIndex1, int joinIndex2) {
         // TODO
         this.index = index;
@@ -32,6 +34,9 @@ public class QueryResult {
         this.attrs = new ArrayList<>();
         this.queryTables = queryTables;
         this.joinType = JoinCondition.JoinType.INNER;
+        this.orderByIndex = -1;
+        this.desc = false;
+        this.distinct = false;
     }
 
     public QueryResult(QueryTable[] queryTables,
@@ -41,6 +46,20 @@ public class QueryResult {
                        JoinCondition.JoinType type) {
         this(queryTables, index, needJoin, joinIndex1, joinIndex2);
         this.joinType = type;
+    }
+
+    public QueryResult(QueryTable[] queryTables,
+                       List<Integer> index,
+                       boolean needJoin,
+                       int joinIndex1, int joinIndex2,
+                       JoinCondition.JoinType type,
+                       int orderByIndex,
+                       boolean desc,
+                       boolean distinct) {
+        this(queryTables, index, needJoin, joinIndex1, joinIndex2,type);
+        this.orderByIndex = orderByIndex;
+        this.desc = desc;
+        this.distinct = distinct;
     }
 
     public List<Row> query() {
@@ -77,6 +96,12 @@ public class QueryResult {
         List<Row> finalRes = new ArrayList<>();
         for (Row r : result) {
             finalRes.add(generateQueryRecord(r));
+        }
+        if (distinct) {
+            distinctRow(finalRes);
+        }
+        if (orderByIndex >= 0) {
+            sort(finalRes);
         }
         return finalRes;
     }
@@ -173,6 +198,16 @@ public class QueryResult {
             }
         }
         return joinedRows;
+    }
+
+    private void sort(List<Row> rows) {
+        rows.sort(new Row.RowComparator(orderByIndex, desc));
+    }
+
+    private void distinctRow(List<Row> rows) {
+        Set<Row> set = new HashSet<>(rows);
+        rows.clear();
+        rows.addAll(set);
     }
 
     public static Row combineRow(LinkedList<Row> rows) {
