@@ -1,5 +1,4 @@
 package cn.edu.thssdb.client;
-/*
 
 import cn.edu.thssdb.rpc.thrift.*;
 import cn.edu.thssdb.rpc.thrift.GetTimeReq;
@@ -22,6 +21,7 @@ import org.slf4j.LoggerFactory;
 
 import javax.swing.*;
 import javax.swing.table.*;
+import javax.xml.bind.annotation.XmlElementDecl;
 import java.awt.*;
 import java.io.PrintStream;
 import java.util.List;
@@ -61,7 +61,8 @@ public class MyClient {
             echoStarting();
             String host = commandLine.getOptionValue(HOST_ARGS, Global.DEFAULT_SERVER_HOST);
             int port = Integer.parseInt(commandLine.getOptionValue(PORT_ARGS, String.valueOf(Global.DEFAULT_SERVER_PORT)));
-            transport = new TFramedTransport(new TSocket(host, port));
+            // transport = new TFramedTransport(new TSocket(host, port));
+            transport = new TSocket(Global.DEFAULT_SERVER_HOST, Global.DEFAULT_SERVER_PORT);
             transport.open();
             protocol = new TBinaryProtocol(transport);
             client = new IService.Client(protocol);
@@ -123,9 +124,9 @@ public class MyClient {
     }
 
     private static void disconnect() {
-        DisconnetReq req = new DisconnetReq(session_id);
+        DisconnectReq req = new DisconnectReq(session_id);
         try {
-            DisconnetResp resp = client.disconnect(req);
+            DisconnectResp resp = client.disconnect(req);
             Status s = resp.getStatus();
             if (s.getCode() == Global.SUCCESS_CODE) {
                 println("Success");
@@ -296,4 +297,3 @@ public class MyClient {
 
 }
 
- */
