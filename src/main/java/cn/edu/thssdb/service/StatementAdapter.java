@@ -26,7 +26,7 @@ public class StatementAdapter {
     private boolean isInTransaction = false;
     private List<Table> exclusiveLockedTables = new ArrayList<Table>();
 
-    private static long transactionID;
+    private final long transactionID;
     private LogHandler logHandler = null;
 
     private List<Column> resultHeader = null;
@@ -279,6 +279,7 @@ public class StatementAdapter {
                 database.getTable(table2).getLock().readLock().lock();
             }
         }
+
         QueryTable[] q;
         boolean needJoin;
         JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
@@ -576,6 +577,8 @@ public class StatementAdapter {
 
 
     public boolean getResult(List<String> columnList, List<List<String>> rowList) {
+        columnList.clear();
+        rowList.clear();
         if (resultTable == null && resultSchemaTable == null) {
             return false;
         }
@@ -604,6 +607,8 @@ public class StatementAdapter {
         }
         return true;
     }
+
+
 
     private int findAttrIndexInColumns(List<Column> columns, String attr) {
         for (int i = 0; i < columns.size(); ++i) {

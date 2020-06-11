@@ -19,6 +19,8 @@ import cn.edu.thssdb.service.LogHandler;
 import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.utils.Global;
 
+import javax.print.DocFlavor;
+
 class tableInfo implements Serializable {
     private String databaseName;
     public String tableName;
@@ -137,9 +139,10 @@ public class Database {
             if (dir.isDirectory()) {
                 String[] children = dir.list();
                 for (int i = 0; i < children.length; i++) {
-                    boolean success = (new File(dir, children[i])).delete();
+                    File delFile = new File(dir,children[i]);
+                    boolean success = delFile.delete();
                     if (!success)
-                        throw new IOException("Deleting database failed.");
+                        throw new IOException("Deleting" + children[i] + "failed.");
                 }
             }
         } catch (IOException e) {
@@ -148,8 +151,9 @@ public class Database {
     }
 
 
-    public void recover() {
+    public void recover() throws IOException {
         // 从manage文件中恢复管理信息
+        ObjectInputStream ois = null;
         tableInfos = new ArrayList<>(0);
         tables.clear();
         HashMap<String, Integer> tableFramesNum = new HashMap<>();
@@ -158,7 +162,7 @@ public class Database {
             if (!manageFile.exists()) {
                 manageFile.createNewFile();
             } else {
-                ObjectInputStream ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
+                ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
                 while (true) {
                     tableInfo tbInfo = (tableInfo) ois.readObject();
                     Column[] cols = new Column[tbInfo.columns.size()];
@@ -170,6 +174,7 @@ public class Database {
                     tableFramesNum.put(tbInfo.tableName, tbInfo.frameNum);
                     tableInfos.add(tbInfo);
                 }
+
             }
         } catch (EOFException e) {
             System.out.println("读取数据库的表信息： 类对象已完全读入");
@@ -178,6 +183,9 @@ public class Database {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            if (ois != null) {
+                ois.close();
+            }
             persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM, tableFramesNum);
             System.out.println("recover database: " + name);
             System.out.println("tableName & frameNum: ");
@@ -237,7 +245,7 @@ public class Database {
                     String[] strMsg = uncommittedCmds.get(i).split(" ");
                     Long logTransactionId = Long.parseLong(strMsg[0]);
                     if (logTransactionId != transactionId && transactionId != 0) {
-                        remain.append(uncommittedCmds.get(i)).append("\t\n");
+                        remain.append(uncommittedCmds.get(i)).append("\r\n");
                         continue;
                     }
                     String cmd = strMsg[1];
@@ -251,7 +259,7 @@ public class Database {
                         int attrNum = Integer.parseInt(strMsg[3]);
                         String[] attrValues = new String[attrNum];
                         for (int j = 0; j < attrNum; j++) {
-                            attrValues[j] = strMsg[4 + i];
+                            attrValues[j] = strMsg[4 + j];
                         }
                         try {
                             adapter.insertTableRow(tbName, attrValues);

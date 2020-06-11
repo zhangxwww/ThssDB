@@ -181,22 +181,24 @@ public class Visitor extends SQLBaseVisitor {
 			distinct = true;
 		}
 		//order
-		SQLParser.Column_full_nameContext order_columnContext = ctx.order_column().column_full_name();
-		SQLParser.Table_nameContext table_nameContext = order_columnContext.table_name();
-		String orderTableName = "";
-		if (table_nameContext != null){
-			orderTableName = table_nameContext.getText().toUpperCase();
+		OrderBy orderBy = null;
+		SQLParser.Order_columnContext order_column = ctx.order_column();
+		if (order_column != null){
+			SQLParser.Column_full_nameContext order_columnContext = ctx.order_column().column_full_name();
+			SQLParser.Table_nameContext table_nameContext = order_columnContext.table_name();
+			String orderTableName = "";
+			if (table_nameContext != null){
+				orderTableName = table_nameContext.getText().toUpperCase();
+			}
+
+			String orderColName = order_columnContext.column_name().getText().toUpperCase();
+
+			boolean desc = false;
+			if (ctx.K_DESC() != null) {
+				desc = true;
+			}
+			orderBy = new OrderBy(orderTableName, orderColName, desc);
 		}
-
-		String orderColName = order_columnContext.column_name().getText().toUpperCase();
-
-		boolean desc = false;
-		if (ctx.K_DESC() != null) {
-			desc = true;
-		}
-
-		OrderBy orderBy = new OrderBy(orderTableName, orderColName, desc);
-
 
 		statementAdapter.select(results, table1, table2, joinCondition, whereCondition, distinct, orderBy);
 		return null;

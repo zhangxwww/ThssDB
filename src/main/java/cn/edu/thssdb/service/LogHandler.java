@@ -15,7 +15,7 @@ public class LogHandler {
     }
 
     public LogHandler(Database database) {
-        WALpath = Global.ROOT_PATH + database.getName() + ".log";
+        WALpath = Global.ROOT_PATH + database.getName() + "/" + database.getName()  + ".log";
         this.database = database;
     }
 
@@ -47,7 +47,7 @@ public class LogHandler {
     }
 
     void writeWAL(String line) {
-        line += "\t\n";
+        line += "\r\n";
         try {
             File file = new File(WALpath);
             if (!file.exists()) {
@@ -101,7 +101,7 @@ public class LogHandler {
                 String remain = "";
                 for (String remainLine : remainlines) {
                     if (remainLine.length() > 0) {
-                        remain += remainLine + "\t\n";
+                        remain += remainLine + "\r\n";
                     }
 
                 }

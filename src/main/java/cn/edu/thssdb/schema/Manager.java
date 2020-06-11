@@ -1,9 +1,13 @@
 package cn.edu.thssdb.schema;
 
+import cn.edu.thssdb.exception.DuplicateKeyException;
+import cn.edu.thssdb.exception.KeyNotExistException;
+import cn.edu.thssdb.query.WhereCondition;
 import cn.edu.thssdb.server.ThssDB;
 
 import java.io.*;
 import java.nio.file.DirectoryNotEmptyException;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -96,6 +100,35 @@ public class Manager {
             } else {
                 System.out.println("Failed to delete empty directory: " + dirPath);
             }
+            // delete info in manage.txt
+            try {
+                StringBuilder remainDatabases = new StringBuilder();
+                File file = new File(Global.ROOT_PATH + "manage.txt");
+                if (file.exists()) {
+                    FileReader fr = new FileReader(file);
+                    BufferedReader br = new BufferedReader(fr);
+                    String line = null;
+                    while ((line = br.readLine()) != null) {
+                        if (line.length() > 0) {
+                            System.out.println(line);
+                            if (!line.toUpperCase().trim().equals(dbName.toUpperCase())){
+                                remainDatabases.append(line).append("\r\n");
+                            }
+                        }
+                    }
+                    br.close();
+                    fr.close();
+
+                    //清空该文件
+                    FileOutputStream fileWriter = new FileOutputStream(file, false);
+                    fileWriter.write(remainDatabases.toString().getBytes());
+                    fileWriter.flush();
+                    fileWriter.close();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+
         }
     }
 
@@ -110,7 +143,12 @@ public class Manager {
         } else {
             Database curDB = databases.get(dbName);
             curDatabase = dbName;
-            curDB.recover();
+            try {
+                curDB.recover();
+            } catch (IOException e) {
+                System.out.println("Recover database: " + dbName + " failed.");
+                e.printStackTrace();
+            }
             System.out.println("Switch to database: " + dbName);
             return curDB;
         }
