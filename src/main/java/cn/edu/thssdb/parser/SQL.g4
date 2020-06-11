@@ -79,7 +79,7 @@ value_entry :
 
 select_stmt :
     K_SELECT ( K_DISTINCT | K_ALL )? result_column ( ',' result_column )*
-        K_FROM table_query ( ',' table_query )* ( K_WHERE multiple_condition )? ;
+        K_FROM table_query ( ',' table_query )* ( K_WHERE multiple_condition )? (K_ORDER K_BY order_column (K_DESC | K_ASC)?)?;
 
 create_view_stmt :
     K_CREATE K_VIEW view_name K_AS select_stmt ;
@@ -133,6 +133,9 @@ result_column
     : '*'
     | table_name '.' '*'
     | column_full_name;
+
+order_column
+    : column_full_name;
 
 table_query :
     table_name
@@ -228,6 +231,9 @@ K_USER : U S E R;
 K_VALUES : V A L U E S;
 K_VIEW : V I E W;
 K_WHERE : W H E R E;
+K_ORDER : O R D E R;
+K_ASC : A S C;
+K_DESC : D E S C;
 
 IDENTIFIER :
     [a-zA-Z_] [a-zA-Z_0-9]* ;

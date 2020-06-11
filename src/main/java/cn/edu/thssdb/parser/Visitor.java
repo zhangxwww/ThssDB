@@ -3,6 +3,7 @@ package cn.edu.thssdb.parser;
 import cn.edu.thssdb.exception.SyntaxErrorException;
 import cn.edu.thssdb.query.Condition;
 import cn.edu.thssdb.query.JoinCondition;
+import cn.edu.thssdb.query.OrderBy;
 import cn.edu.thssdb.query.WhereCondition;
 import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.service.StatementAdapter;
@@ -173,7 +174,31 @@ public class Visitor extends SQLBaseVisitor {
 		if (whereConditionContext != null) {
 			whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
 		}
-		statementAdapter.select(results, table1, table2, joinCondition, whereCondition, false, null);
+
+		//distinct
+		boolean distinct = false;
+		if (ctx.K_DISTINCT() != null) {
+			distinct = true;
+		}
+		//order
+		SQLParser.Column_full_nameContext order_columnContext = ctx.order_column().column_full_name();
+		SQLParser.Table_nameContext table_nameContext = order_columnContext.table_name();
+		String orderTableName = "";
+		if (table_nameContext != null){
+			orderTableName = table_nameContext.getText().toUpperCase();
+		}
+
+		String orderColName = order_columnContext.column_name().getText().toUpperCase();
+
+		boolean desc = false;
+		if (ctx.K_DESC() != null) {
+			desc = true;
+		}
+
+		OrderBy orderBy = new OrderBy(orderTableName, orderColName, desc);
+
+
+		statementAdapter.select(results, table1, table2, joinCondition, whereCondition, distinct, orderBy);
 		return null;
 	}
 

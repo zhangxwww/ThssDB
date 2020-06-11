@@ -55,21 +55,20 @@ public class test {
 //
 //        List<List<String>> rowList = new ArrayList<>(0);
 //        showTable(columnList,rowList);
-        System.out.println(null == null);
-        System.out.println(null != null);
 
-        Double.parseDouble("abc");
-//        String len = "insert into student(name) VALUES ('bob',15)";
+
+
+//        String len = "select distinct name, id from student order by name asc";
 //        CharStream input = CharStreams.fromString(len);
 //        SQLLexer lexer = new SQLLexer(input);
 //        CommonTokenStream tokens = new CommonTokenStream(lexer);
 //        SQLParser parser = new SQLParser(tokens);
-//        StatementAdapter adapter = new StatementAdapter();
+//        StatementAdapter adapter = new StatementAdapter(null,123);
 //         Visitor visitor = new Visitor(adapter);
 //        SQLParser.ParseContext ctxTest = parser.parse();
 ////
 //        System.out.println(visitor.visitParse(ctxTest));
-
+//
 //        SQLBaseListener listener = new SQLBaseListener();
 
     }

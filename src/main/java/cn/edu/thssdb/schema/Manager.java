@@ -26,6 +26,12 @@ public class Manager {
         databases = new HashMap<>(0);
         //从文件manage.txt中恢复
         try {
+            File dir = new File(Global.ROOT_PATH);
+            if (!dir.exists()) {
+                dir.mkdir();
+            }
+
+
             File file = new File(Global.ROOT_PATH + "manage.txt");
             if (!file.exists()) {
                 boolean success = file.createNewFile();

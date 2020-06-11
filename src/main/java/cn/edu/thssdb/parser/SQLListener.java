@@ -1,4 +1,4 @@
-// Generated from D:/codes/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.8
+// Generated from C:/Users/FeinZee/Downloads/Software learning/database/THSSdbWorld/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.8
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.tree.ParseTreeListener;
 
@@ -337,6 +337,16 @@ public interface SQLListener extends ParseTreeListener {
 	 * @param ctx the parse tree
 	 */
 	void exitResult_column(SQLParser.Result_columnContext ctx);
+	/**
+	 * Enter a parse tree produced by {@link SQLParser#order_column}.
+	 * @param ctx the parse tree
+	 */
+	void enterOrder_column(SQLParser.Order_columnContext ctx);
+	/**
+	 * Exit a parse tree produced by {@link SQLParser#order_column}.
+	 * @param ctx the parse tree
+	 */
+	void exitOrder_column(SQLParser.Order_columnContext ctx);
 	/**
 	 * Enter a parse tree produced by {@link SQLParser#table_query}.
 	 * @param ctx the parse tree

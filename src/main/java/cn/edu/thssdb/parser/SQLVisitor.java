@@ -1,4 +1,4 @@
-// Generated from D:/codes/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.8
+// Generated from C:/Users/FeinZee/Downloads/Software learning/database/THSSdbWorld/ThssDB/src/main/java/cn/edu/thssdb/parser\SQL.g4 by ANTLR 4.8
 package cn.edu.thssdb.parser;
 import org.antlr.v4.runtime.tree.ParseTreeVisitor;
 
@@ -208,6 +208,12 @@ public interface SQLVisitor<T> extends ParseTreeVisitor<T> {
 	 * @return the visitor result
 	 */
 	T visitResult_column(SQLParser.Result_columnContext ctx);
+	/**
+	 * Visit a parse tree produced by {@link SQLParser#order_column}.
+	 * @param ctx the parse tree
+	 * @return the visitor result
+	 */
+	T visitOrder_column(SQLParser.Order_columnContext ctx);
 	/**
 	 * Visit a parse tree produced by {@link SQLParser#table_query}.
 	 * @param ctx the parse tree
