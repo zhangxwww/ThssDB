@@ -173,7 +173,7 @@ public class Visitor extends SQLBaseVisitor {
 		if (whereConditionContext != null) {
 			whereCondition = (WhereCondition) visitMultiple_condition(ctx.multiple_condition());
 		}
-		statementAdapter.select(results, table1, table2, joinCondition, whereCondition);
+		statementAdapter.select(results, table1, table2, joinCondition, whereCondition, false, null);
 		return null;
 	}
 

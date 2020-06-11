@@ -27,7 +27,7 @@ public class ThssDB {
 
 	private static IServiceHandler handler;
 	private static IService.Processor processor;
-	private static TNonblockingServerSocket transport;
+	private static TServerSocket transport;
 	private static TServer server;
 
 	private Manager manager;
@@ -56,8 +56,8 @@ public class ThssDB {
 
 	private static void setUp(IService.Processor processor) {
 		try {
-			transport = new TNonblockingServerSocket(Global.DEFAULT_SERVER_PORT);
-			server = new TNonblockingServer(new TNonblockingServer.Args(transport).processor(processor));
+			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
+			server = new TSimpleServer(new TServer.Args(transport).processor(processor));
 			logger.info("Starting ThssDB ...");
 			server.serve();
 		} catch (TTransportException e) {

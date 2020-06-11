@@ -55,9 +55,9 @@ public class IServiceHandler implements IService.Iface {
     }
 
     @Override
-    public DisconnetResp disconnect(DisconnetReq req) throws TException {
+    public DisconnectResp disconnect(DisconnectReq req) throws TException {
         // TODO
-        DisconnetResp resp = new DisconnetResp();
+        DisconnectResp resp = new DisconnectResp();
         long sessionid = req.getSessionId();
         if (connected_sessionid.contains(sessionid)) {
             connected_sessionid.remove(sessionid);

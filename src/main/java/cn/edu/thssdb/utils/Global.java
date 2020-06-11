@@ -2,8 +2,8 @@ package cn.edu.thssdb.utils;
 
 public class Global {
 
-  public static String USERNAME = "admin";
-  public static String PASSWORD = "admin";
+  public static String USERNAME = "username";
+  public static String PASSWORD = "password";
 
   public static int fanout = 129;
 
