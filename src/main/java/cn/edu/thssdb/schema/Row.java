@@ -1,10 +1,7 @@
 package cn.edu.thssdb.schema;
 
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.StringJoiner;
+import java.util.*;
 
 public class Row implements Serializable {
     private static final long serialVersionUID = -5809782578272943999L;
@@ -37,6 +34,37 @@ public class Row implements Serializable {
         for (Entry e : entries)
             sj.add(e.toString());
         return sj.toString();
+    }
+
+    @Override
+    public int hashCode() {
+        int code = 0;
+        for (Entry e : entries) {
+            code += e.value.hashCode();
+        }
+        return code;
+    }
+
+    @Override
+    public boolean equals(Object obj) {
+        if (obj == null) {
+            return false;
+        }
+        if (this.getClass() != obj.getClass()) {
+            return false;
+        }
+        Row r = (Row) obj;
+        List<Entry> entries1 = r.getEntries();
+        if (entries.size() != entries1.size()) {
+            return false;
+        }
+        int nEntries = entries.size();
+        for (int i = 0; i < nEntries; ++i) {
+            if (!entries.get(i).equals(entries1.get(i))) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static class RowComparator implements Comparator<Row> {
