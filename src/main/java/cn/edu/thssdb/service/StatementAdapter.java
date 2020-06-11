@@ -454,29 +454,31 @@ public class StatementAdapter {
         List<String> attrs = new ArrayList<>();
         int midIndex = mergeAttrs(t1, t2, attrs);
         if (ob.tableName.equals("")) {
-            for (int index : selectIndex) {
-                if (attrs.get(index).equals(ob.attr)) {
-                    return index;
+            for (int i = 0; i < selectIndex.size(); ++i) {
+                if (attrs.get(selectIndex.get(i)).equals(ob.attr)) {
+                    return i;
                 }
             }
             throw new AttrNotExistsException();
         } else if (ob.tableName.equals(t1)) {
-            for (int index : selectIndex) {
+            for (int i = 0; i < selectIndex.size(); ++i) {
+                int index = selectIndex.get(i);
                 if (index >= midIndex) {
                     break;
                 }
                 if (attrs.get(index).equals(ob.attr)) {
-                    return index;
+                    return i;
                 }
             }
             throw new AttrNotExistsException();
         } else if (ob.tableName.equals(t2)) {
-            for (int index : selectIndex) {
+            for (int i = 0; i < selectIndex.size(); ++i) {
+                int index = selectIndex.get(i);
                 if (index < midIndex) {
-                    break;
+                    continue;
                 }
                 if (attrs.get(index).equals(ob.attr)) {
-                    return index;
+                    return i;
                 }
             }
             throw new AttrNotExistsException();
