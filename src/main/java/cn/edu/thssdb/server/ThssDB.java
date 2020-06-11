@@ -44,11 +44,11 @@ public class ThssDB {
 
 	private void start() {
 		manager = new Manager();
-		manager.createDatabaseIfNotExists("TEST");
-		database = manager.switchDatabase("TEST");
+		// manager.createDatabaseIfNotExists("TEST");
+		// database = manager.switchDatabase("TEST");
 		//并且自动查询log文件，看看有没有要恢复的内容
-		this.database.recoverUncommittedCmd(0);
-		handler = new IServiceHandler(database);
+		// this.database.recoverUncommittedCmd(0);
+		handler = new IServiceHandler(manager);
 		processor = new IService.Processor(handler);
 		Runnable setup = () -> setUp(processor);
 		new Thread(setup).start();

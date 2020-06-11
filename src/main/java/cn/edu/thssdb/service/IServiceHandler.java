@@ -7,6 +7,7 @@ import cn.edu.thssdb.rpc.thrift.ExecuteStatementReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeReq;
 import cn.edu.thssdb.rpc.thrift.GetTimeResp;
 import cn.edu.thssdb.schema.Database;
+import cn.edu.thssdb.schema.Manager;
 import cn.edu.thssdb.utils.Global;
 import org.apache.thrift.TException;
 
@@ -18,10 +19,12 @@ public class IServiceHandler implements IService.Iface {
     private Set<Long> connected_sessionid = new HashSet<>();
     private HashMap<Long, StatementExecuter> executerList = new HashMap<>();
     private Database database;
+    private Manager manager;
 
-    public IServiceHandler(Database db) {
+    public IServiceHandler(Manager manager) {
         super();
-        this.database = db;
+        this.database = null;
+        this.manager = manager;
     }
 
     @Override
@@ -46,7 +49,7 @@ public class IServiceHandler implements IService.Iface {
             }
             resp.setSessionId(sessionid);
             connected_sessionid.add(sessionid);
-            executerList.put(sessionid, new StatementExecuter(database, sessionid));
+            executerList.put(sessionid, new StatementExecuter(manager, sessionid));
         } else {
             resp.setStatus(new Status(Global.FAILURE_CODE));
             resp.setSessionId(0L);
@@ -61,6 +64,8 @@ public class IServiceHandler implements IService.Iface {
         long sessionid = req.getSessionId();
         if (connected_sessionid.contains(sessionid)) {
             connected_sessionid.remove(sessionid);
+            StatementExecuter executer = executerList.get(sessionid);
+            executer.disconnect();
             executerList.remove(sessionid);
             resp.setStatus(new Status(Global.SUCCESS_CODE));
         } else {

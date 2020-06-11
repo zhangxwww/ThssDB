@@ -42,7 +42,7 @@ public class StatementAdapter {
 
     public StatementAdapter(Database database, long sessionid) {
         this.database = database;
-        this.transactionID = sessionid;
+        transactionID = sessionid;
         this.logHandler = new LogHandler(this.database);
     }
 

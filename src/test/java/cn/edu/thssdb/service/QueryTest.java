@@ -16,17 +16,21 @@ import static org.junit.Assert.*;
 public class QueryTest {
 	@Before
 	public void setUp() {
-		// Zhang Xinwei tai qiang le
+		// Zhang Xinwei tai qiang le ???
 	}
 
 	@Test
 	public void testCreateTable() {
 		Manager manager = new Manager();
-		manager.createDatabaseIfNotExists("UnitTest");
-		Database database = manager.switchDatabase("UnitTest");
-		StatementExecuter executer = new StatementExecuter(database, 43);
+		StatementExecuter executer = new StatementExecuter(manager, 43);
+		String statement1 = "create database UNITTEST";
+		executer.execute(statement1);
+		String statement2 = "use UNITTEST";
+		executer.execute(statement2);
 		String statement = "create table student(ID  int, name String(24), PRIMARY Key(id));";
 		executer.execute(statement);
+		Database database = executer.getDatabase();
+		assertNotNull(database);
 		Table table = database.getTable("STUDENT");
 		assertNotNull(table);
 		List<Column> columns = table.getColumns();
@@ -41,15 +45,24 @@ public class QueryTest {
 	@Test
 	public void testInsert() {
 		Manager manager = new Manager();
-		manager.createDatabaseIfNotExists("UnitTest");
-		Database database = manager.switchDatabase("UnitTest");
-		StatementExecuter executer = new StatementExecuter(database, 43);
+
+		StatementExecuter executer = new StatementExecuter(manager, 43);
+
+		String statement1 = "create database UNITTEST";
+		executer.execute(statement1);
+		String statement2 = "use UNITTEST";
+		executer.execute(statement2);
+
 		executer.execute("create table student(ID  int, name String(24), PRIMARY Key(id));");
-		Table table = database.getTable("STUDENT");
 		executer.execute("INSERT INTO student VALUES (010136, 'myq');");
 		executer.execute("INSERT INTO student VALUES (233333, 'zxw');");
 		executer.execute("INSERT INTO Student Values (10086,  'wyb');");
-		int i = 0;
+
+		Database database = executer.getDatabase();
+		assertNotNull(database);
+
+		Table table = database.getTable("STUDENT");
+
 		HashMap<String, String> entries = new HashMap<String, String>();
 		for (Row row: table) {
 			entries.put(row.getEntry(0), row.getEntry(1));
@@ -63,9 +76,12 @@ public class QueryTest {
 	@Test
 	public void testSelect() {
 		Manager manager = new Manager();
-		manager.createDatabaseIfNotExists("UnitTest");
-		Database database = manager.switchDatabase("UnitTest");
-		StatementExecuter executer = new StatementExecuter(database, 43);
+		StatementExecuter executer = new StatementExecuter(manager, 43);
+
+		String statement1 = "create database UNITTEST";
+		executer.execute(statement1);
+		String statement2 = "use UNITTEST";
+		executer.execute(statement2);
 
 		List<String> testStatements = new ArrayList<String>() {{
 			add("create table student(ID  int, name String(24), PRIMARY Key(id));");
@@ -77,6 +93,10 @@ public class QueryTest {
 			add("insert into gpa values ('wyb', 4.0);");
 		}};
 		executer.batchExecute(testStatements);
+
+		Database database = executer.getDatabase();
+		assertNotNull(database);
+
 		Table studentTable = database.getTable("STUDENT");
 		Table gpaTable = database.getTable("GPA");
 
