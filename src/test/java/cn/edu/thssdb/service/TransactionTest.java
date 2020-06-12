@@ -34,36 +34,35 @@ public class TransactionTest {
         executer1.execute("INSERT INTO Student Values (10086,  'wyb');");
     }
 
-    @Test
-    public void testWriteLock() {
-        List<String> columnList = new ArrayList<>();
-        List<List<String>> rowList = new ArrayList<>();
-        executer1.execute("SELECT  id, name  FROM  student");
-        assertTrue(executer1.getResult(columnList, rowList));
-        assertEquals(rowList.size(), 3);
-
-        List<String> testStatements = new ArrayList<String>() {{
-            add("begin transaction");
-            add("INSERT INTO student VALUES (052424, 'mym');");
-            add("UPDATE student SET name = 'myq' where id = 010136;");
-            add("SELECT  id, name  FROM  student;");
-        }};
-        executer2.batchExecute(testStatements);
-
-
-        executer1.execute("begin transaction");
-        executer1.execute("SELECT  id, name  FROM  student");
-        assertTrue(executer1.getResult(columnList, rowList));
-        // TODO 应该是卡住的
-        // assertEquals(4,rowList.size());
-
-        executer2.execute("Commit");
-        Database database = executer1.getDatabase();
-        database.recoverUncommittedCmd(110);
-        executer2.execute("SELECT  id, name  FROM  student");
-        assertTrue(executer2.getResult(columnList, rowList));
-        assertEquals(4, rowList.size());
-    }
+//    @Test
+//    public void testWriteLock() {
+//        List<String> columnList = new ArrayList<>();
+//        List<List<String>> rowList = new ArrayList<>();
+//        executer1.execute("SELECT  id, name  FROM  student");
+//        assertTrue(executer1.getResult(columnList, rowList));
+//        assertEquals(rowList.size(), 3);
+//
+//        List<String> testStatements = new ArrayList<String>() {{
+//            add("begin transaction");
+//            add("INSERT INTO student VALUES (052424, 'mym');");
+//            add("UPDATE student SET name = 'myq' where id = 010136;");
+//            add("SELECT  id, name  FROM  student;");
+//        }};
+//        executer2.batchExecute(testStatements);
+//
+//
+//        executer1.execute("begin transaction");
+//        executer1.execute("SELECT  id, name  FROM  student");
+//        assertTrue(executer1.getResult(columnList, rowList));
+//        assertEquals(4,rowList.size());
+    //在同一个线程，所以没有办法看出读写互斥
+//        executer2.execute("Commit");
+//        Database database = executer1.getDatabase();
+//        database.recoverUncommittedCmd(110);
+//        executer2.execute("SELECT  id, name  FROM  student");
+//        assertTrue(executer2.getResult(columnList, rowList));
+//        assertEquals(4, rowList.size());
+//    }
 
     @Test
     public void testRecover() {

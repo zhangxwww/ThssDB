@@ -101,7 +101,6 @@ public class StatementExecuter {
 
     private void switchDatabase(String dbName) {
         database = manager.switchDatabase(dbName.toUpperCase());
-        database.recoverUncommittedCmd(0);
         adapter = new StatementAdapter(this.database, this.sessionId);
     }
 

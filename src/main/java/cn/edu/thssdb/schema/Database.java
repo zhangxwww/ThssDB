@@ -47,6 +47,8 @@ public class Database {
     private ArrayList<tableInfo> tableInfos;
     public PageFilePersist persistManager;
 
+    boolean isRecovered = false;
+
 
     public Database(String name) {
         this.name = name;
@@ -152,6 +154,8 @@ public class Database {
 
 
     public void recover() throws IOException {
+        if (isRecovered) return;
+
         // 从manage文件中恢复管理信息
         ObjectInputStream ois = null;
         tableInfos = new ArrayList<>(0);
@@ -176,6 +180,7 @@ public class Database {
                 }
 
             }
+
         } catch (EOFException e) {
             System.out.println("读取数据库的表信息： 类对象已完全读入");
         } catch (FileNotFoundException e) {
@@ -183,6 +188,7 @@ public class Database {
         } catch (Exception e) {
             e.printStackTrace();
         } finally {
+            isRecovered = true;
             if (ois != null) {
                 ois.close();
             }
@@ -200,6 +206,7 @@ public class Database {
                 byte[] bData = persistManager.retrieveTable(t.tableName);
                 t.recover(bData); //表获取数据
             }
+            this.recoverUncommittedCmd(0);
         }
     }
 

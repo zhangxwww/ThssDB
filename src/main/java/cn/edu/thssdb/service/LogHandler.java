@@ -10,10 +10,6 @@ public class LogHandler {
     private static String WALpath = null;
     private Database database = null;
 
-    public LogHandler(String database) {
-        WALpath = Global.ROOT_PATH + database + ".log";
-    }
-
     public LogHandler(Database database) {
         WALpath = Global.ROOT_PATH + database.getName() + "/" + database.getName()  + ".log";
         this.database = database;
@@ -120,19 +116,4 @@ public class LogHandler {
         return WALpath;
     }
 
-    public static void main(String[] args) {
-
-        LogHandler logHandler = new LogHandler("TEST");
-        String[] line = new String[6];
-        line[0] = "123 CREATE student";
-        line[1] = "123 DROP student";
-        line[2] = "123 INSERT student id 20160101";
-        line[3] = "123 DELETE student 3 20160101 myq 20 ";
-        line[4] = "124 INSERT student id 20170202";
-        line[5] = "124 INSERT student id 20170303";
-        for (int i = 0; i < 6; i++) {
-            logHandler.writeWAL(line[i]);
-        }
-        logHandler.commit(123);
-    }
 }

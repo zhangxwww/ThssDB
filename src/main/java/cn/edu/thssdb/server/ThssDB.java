@@ -8,9 +8,11 @@ import cn.edu.thssdb.service.IServiceHandler;
 import cn.edu.thssdb.service.LogHandler;
 import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.utils.Global;
+import org.apache.thrift.protocol.TBinaryProtocol;
 import org.apache.thrift.server.TNonblockingServer;
 import org.apache.thrift.server.TServer;
 import org.apache.thrift.server.TSimpleServer;
+import org.apache.thrift.server.TThreadPoolServer;
 import org.apache.thrift.transport.TNonblockingServerSocket;
 import org.apache.thrift.transport.TServerSocket;
 import org.apache.thrift.transport.TTransportException;
@@ -27,8 +29,10 @@ public class ThssDB {
 
 	private static IServiceHandler handler;
 	private static IService.Processor processor;
+//	private static TServerSocket transport;
 	private static TServerSocket transport;
 	private static TServer server;
+
 
 	private Manager manager;
 	private Database database;
@@ -56,8 +60,14 @@ public class ThssDB {
 
 	private static void setUp(IService.Processor processor) {
 		try {
+//			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
+//			server = new TSimpleServer(new TServer.Args(transport).processor(processor));
 			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
-			server = new TSimpleServer(new TServer.Args(transport).processor(processor));
+			TThreadPoolServer.Args tArgs = new TThreadPoolServer.Args(transport);
+			tArgs.processor(processor);
+			//客户端协议要一致
+			tArgs.protocolFactory(new TBinaryProtocol.Factory());
+			server = new TThreadPoolServer(tArgs);
 			logger.info("Starting ThssDB ...");
 			server.serve();
 		} catch (TTransportException e) {

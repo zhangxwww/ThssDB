@@ -61,7 +61,7 @@ public class MyClient {
             echoStarting();
             String host = commandLine.getOptionValue(HOST_ARGS, Global.DEFAULT_SERVER_HOST);
             int port = Integer.parseInt(commandLine.getOptionValue(PORT_ARGS, String.valueOf(Global.DEFAULT_SERVER_PORT)));
-            // transport = new TFramedTransport(new TSocket(host, port));
+//             transport = new TFramedTransport(new TSocket(host, port));
             transport = new TSocket(Global.DEFAULT_SERVER_HOST, Global.DEFAULT_SERVER_PORT);
             transport.open();
             protocol = new TBinaryProtocol(transport);

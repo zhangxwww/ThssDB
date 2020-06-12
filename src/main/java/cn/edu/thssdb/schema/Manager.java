@@ -135,7 +135,7 @@ public class Manager {
     public Database switchDatabase(String dbName) {
         if (curDatabase != null) {
             Database lastDB = databases.get(curDatabase);
-            lastDB.quit(); //存储到磁盘且回收内存池
+            lastDB.persist(); //存储到磁盘且回收内存池
             System.out.println("Last database: " + curDatabase);
         }
         if (!databases.containsKey(dbName)) {
