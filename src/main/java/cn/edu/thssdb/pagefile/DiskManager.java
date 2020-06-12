@@ -40,6 +40,7 @@ public class DiskManager implements PageFileConst {
             while ((len = inputStream.read(flush)) != -1) {
                 outputStream.write(flush, 0, len);
             }
+            inputStream.close();
             outputStream.flush();
             outputStream.close();
         } catch (IOException e) {
@@ -61,6 +62,8 @@ public class DiskManager implements PageFileConst {
             }
             outputStream.flush();
             result = outputStream.toByteArray();
+            inputStream.close();
+            outputStream.close();
             return result;
         } catch (IOException e) {
             e.printStackTrace();

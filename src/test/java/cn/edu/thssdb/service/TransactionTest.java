@@ -1,18 +1,16 @@
 package cn.edu.thssdb.service;
-import cn.edu.thssdb.schema.*;
-import cn.edu.thssdb.service.StatementExecuter;
-import cn.edu.thssdb.type.ColumnType;
+
+import cn.edu.thssdb.schema.Database;
+import cn.edu.thssdb.schema.Manager;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
-import java.lang.reflect.Array;
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TransactionTest {
     Manager manager = null;

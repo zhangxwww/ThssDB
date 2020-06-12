@@ -59,14 +59,6 @@ public class PageFilePersist implements PersistenceOperation{
         ArrayList<Integer> pagesInBufferPool = bfm.tablePageMap.get(tableName);
         ArrayList<Integer> pagesAllocated = new ArrayList<>();
 
-        //调试信息
-//        System.out.print(tableName+"原本占据的页为： ");
-//        for (Integer integer : pagesInBufferPool) {
-//            System.out.print(integer + " ");
-//        }
-//        System.out.println();
-
-
         int pageNumNeeded = (int) Math.ceil((float)data.length / PageFileConst.PAGE_SIZE);
         int pageNumHad = pagesInBufferPool.size();
         if (pageNumHad >= pageNumNeeded){
