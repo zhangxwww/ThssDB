@@ -103,7 +103,8 @@ type_name :
 
 column_constraint :
     K_PRIMARY K_KEY
-    | K_NOT K_NULL ;
+    | K_NOT K_NULL
+    | K_UNIQUE;
 
 multiple_condition :
     condition
@@ -234,6 +235,7 @@ K_WHERE : W H E R E;
 K_ORDER : O R D E R;
 K_ASC : A S C;
 K_DESC : D E S C;
+K_UNIQUE : U N I Q U E;
 
 IDENTIFIER :
     [a-zA-Z_] [a-zA-Z_0-9]* ;

@@ -128,7 +128,13 @@ public class StatementAdapter {
                     // +2: 'xxx' length=3
                     throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                 }
-                entries[i] = parseValue(attrType, attrValues[i]);
+                Entry e = parseValue(attrType, attrValues[i]);
+                if (tmpAttr.isUnique()) {
+                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                        throw new DuplicateKeyException();
+                    }
+                }
+                entries[i] = e;
             }
             t.insert(new Row(entries));
         }
@@ -182,6 +188,11 @@ public class StatementAdapter {
                 if (tmpAttr.isNotNull() && e == null) {
                     //TODO 异常处理 不满足 NOTNULL 属性
                     throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
+                }
+                if (tmpAttr.isUnique()) {
+                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                        throw new DuplicateKeyException();
+                    }
                 }
                 entries[i] = e;
             }

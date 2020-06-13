@@ -160,6 +160,18 @@ public class Table implements Iterable<Row> {
         return this.columns;
     }
 
+    public boolean contains(Entry entry, boolean isPrimary, int columnIndex) {
+        if (isPrimary) {
+            return index.contains(entry);
+        } else {
+            for (Row row : this) {
+                if (row.getEntries().get(columnIndex).equals(entry)) {
+                    return true;
+                }
+            }
+            return false;
+        }
+    }
 
     public String getPrimaryKeyName() {
         return this.columns.get(primaryIndex).getName();
