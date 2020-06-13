@@ -123,8 +123,9 @@ public class StatementAdapter {
             for (int i = 0; i < attrs.size(); i++) {
                 Column tmpAttr = attrs.get(i);
                 ColumnType attrType = tmpAttr.getType();
-                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength()) {
+                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength() + 2) {
                     // 检查value长度
+                    // +2: 'xxx' length=3
                     throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                 }
                 entries[i] = parseValue(attrType, attrValues[i]);
@@ -169,8 +170,9 @@ public class StatementAdapter {
                 for (int j = 0; j < attrNames.length; j++) {
                     if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
                         ColumnType attrType = tmpAttr.getType();
-                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength()) {
+                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength() + 2) {
                             // 检查value长度
+                            // +2: 'xxx' length=3
                             throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                         }
                         e = parseValue(attrType, attrValues[j]);
@@ -371,6 +373,8 @@ public class StatementAdapter {
                     instant = new Entry(Double.parseDouble(value));
                     break;
                 case STRING:
+                    instant = new Entry(value.substring(1, value.length() - 1));
+                    break;
                 default:
                     instant = new Entry(value);
                     break;

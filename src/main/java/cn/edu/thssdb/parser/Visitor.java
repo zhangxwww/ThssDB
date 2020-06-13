@@ -245,5 +245,12 @@ public class Visitor extends SQLBaseVisitor {
 		statementAdapter.showTable(tableName);
 		return null;
 	}
+
+	@Override
+	public Object visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
+		String tableName = ctx.table_name().getText().toUpperCase();
+		statementAdapter.showTable(tableName);
+		return null;
+	}
 }
 
