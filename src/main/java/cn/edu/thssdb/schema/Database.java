@@ -1,50 +1,26 @@
 package cn.edu.thssdb.schema;
 
+
 import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.exception.KeyNotExistException;
 import cn.edu.thssdb.exception.TableNotExistsException;
-import cn.edu.thssdb.index.BPlusTree;
-import cn.edu.thssdb.query.QueryResult;
-import cn.edu.thssdb.query.QueryTable;
-
-import java.io.*;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-
 import cn.edu.thssdb.persist.PageFilePersist;
 import cn.edu.thssdb.query.WhereCondition;
 import cn.edu.thssdb.service.LogHandler;
 import cn.edu.thssdb.service.StatementAdapter;
 import cn.edu.thssdb.utils.Global;
 
-import javax.print.DocFlavor;
-
-class tableInfo implements Serializable {
-    private String databaseName;
-    public String tableName;
-    public ArrayList<Column> columns;
-    public int primaryIndex;
-    public int frameNum;
-
-    public tableInfo(String dbName, String tbName, ArrayList<Column> cols, int primaryId, int frameN) {
-        databaseName = dbName;
-        tableName = tbName;
-        columns = cols;
-        primaryIndex = primaryId;
-        frameNum = frameN;
-    }
-}
-
+import java.io.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
 
     private String name;
     private HashMap<String, Table> tables;
     ReentrantReadWriteLock lock;
-
-    private ArrayList<tableInfo> tableInfos;
+    private HashMap<String, TableInfo> tableInfos;
     public PageFilePersist persistManager;
 
     boolean isRecovered = false;
@@ -70,12 +46,12 @@ public class Database {
         tableInfos.clear();
         try {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH + name + "/manage", false));
-            HashMap<String, Integer> tableFramesNum = persistManager.tableFramesNum;
+            HashMap<String, ArrayList<Integer>> tableFramePages = persistManager.tableFramePagesId;
             for (Table t : tables.values()) {
-                int frameNum = tableFramesNum.get(t.tableName);
-                tableInfo tbInfo = new tableInfo(name, t.tableName, t.getColumns(), t.primaryIndex, frameNum);
+                ArrayList<Integer> framePages = tableFramePages.get(t.tableName);
+                TableInfo tbInfo = new TableInfo(t.tableName, t.getColumns(), t.primaryIndex, framePages);
                 objectOutputStream.writeObject(tbInfo);
-                tableInfos.add(tbInfo);
+                tableInfos.put(t.tableName, tbInfo);
             }
             objectOutputStream.close();
         } catch (IOException e) {
@@ -107,12 +83,12 @@ public class Database {
                 throw new TableNotExistsException();
             } else {
                 //把磁盘文件删除
-                int frameNum = persistManager.tableFramesNum.get(tbName);
+                ArrayList<Integer> framePages = persistManager.tableFramePagesId.get(tbName);
                 //注意：psm中tableFramesNum存储的是：上一次table进行serialize时占据多少frame
                 //也就是说，如果table有过增删，但未曾serialize的化，frameNum记录的是旧值
                 //且由于serialize过后不一定进行了persist，所以不见得所有的frame都存到了磁盘中
-                for (int i = 0; i < frameNum; i++) {
-                    File delFile = new File(Global.ROOT_PATH + name + "/" + tbName + i);
+                for (int i : framePages) {
+                    File delFile = new File(Global.ROOT_PATH + name + "/" + i);
                     if (delFile.exists()) {
                         boolean succ = delFile.delete();
                         if (!succ) {
@@ -158,9 +134,8 @@ public class Database {
 
         // 从manage文件中恢复管理信息
         ObjectInputStream ois = null;
-        tableInfos = new ArrayList<>(0);
+        tableInfos = new HashMap<>(0);
         tables.clear();
-        HashMap<String, Integer> tableFramesNum = new HashMap<>();
         try {
             File manageFile = new File(Global.ROOT_PATH + name + "/manage");
             if (!manageFile.exists()) {
@@ -168,15 +143,14 @@ public class Database {
             } else {
                 ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
                 while (true) {
-                    tableInfo tbInfo = (tableInfo) ois.readObject();
+                    TableInfo tbInfo = (TableInfo) ois.readObject();
                     Column[] cols = new Column[tbInfo.columns.size()];
                     for (int i = 0; i < cols.length; i++) {
                         cols[i] = tbInfo.columns.get(i);
                     }
                     Table newTable = new Table(name, tbInfo.tableName, cols, tbInfo.primaryIndex);
                     tables.put(tbInfo.tableName, newTable);
-                    tableFramesNum.put(tbInfo.tableName, tbInfo.frameNum);
-                    tableInfos.add(tbInfo);
+                    tableInfos.put(tbInfo.tableName, tbInfo);
                 }
 
             }
@@ -192,14 +166,11 @@ public class Database {
             if (ois != null) {
                 ois.close();
             }
-            persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM, tableFramesNum);
+            persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM);
             System.out.println("recover database: " + name);
-            System.out.println("tableName & frameNum: ");
-            for (String key : tableFramesNum.keySet()) {
-                System.out.println(key + " Count:" + tableFramesNum.get(key));
-            }
+
             System.out.println("tableInfo: ");
-            for (tableInfo tb : tableInfos) {
+            for (TableInfo tb : tableInfos.values()) {
                 System.out.println(tb.tableName + tb.columns.toString());
             }
             for (Table t : tables.values()) {
@@ -299,7 +270,7 @@ public class Database {
         }
     }
 
-    public int getTableNum(){
-        return tableInfos.size();
-    }
+
+
+
 }

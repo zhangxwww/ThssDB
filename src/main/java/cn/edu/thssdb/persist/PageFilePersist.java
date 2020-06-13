@@ -4,6 +4,7 @@ import cn.edu.thssdb.pagefile.BufferManager;
 import cn.edu.thssdb.pagefile.DiskManager;
 
 import cn.edu.thssdb.pagefile.FrameDescription;
+import cn.edu.thssdb.schema.TableInfo;
 import cn.edu.thssdb.utils.Global;
 
 import java.util.ArrayList;
@@ -18,18 +19,14 @@ public class PageFilePersist implements PersistenceOperation{
     At the beginning, all tables don't occupy pages in the buffer pool.
      */
     //之后有了database的基础，就可以改为private，用方法来赋值下面两个hash映射表
-    public HashMap<String, Integer> tableFramesNum;
+    public HashMap<String, ArrayList<Integer>> tableFramePagesId;
     private BufferManager bfm;
     private String databaseName;
 
+
     //理应还需要databse的一些信息：有哪些表，每个表有多少frame
-    public PageFilePersist(String dbName, int numPages, HashMap<String,Integer> tbFramesNum){
+    public PageFilePersist(String dbName, int numPages){
         bfm = new BufferManager(dbName,numPages);
-        tableFramesNum = tbFramesNum;
-        for (String tbName: tbFramesNum.keySet()){
-            ArrayList<Integer> pageMap = new ArrayList<>(0);
-            bfm.tablePageMap.put(tbName,pageMap);
-        }
         databaseName = dbName;
 
     }
@@ -38,22 +35,20 @@ public class PageFilePersist implements PersistenceOperation{
     public void addTable(String tbName) {
         //数据库新增一张表时，也要在内存管理信息中更新信息。
         //起初，新表所占frameNum=0，在内存中也没有占据页。
-        tableFramesNum.put(tbName,0);
-        bfm.tablePageMap.put(tbName,new ArrayList<>(0));
+        tableFramePagesId.put(tbName,new ArrayList<>());
     }
 
     public void deleteTable(String tbName) {
         //数据库新增一张表时，也要在内存管理信息中更新信息。
         //起初，新表所占frameNum=0，在内存中也没有占据页。
-        tableFramesNum.put(tbName,0);
-        bfm.tablePageMap.put(tbName,new ArrayList<>(0));
+        tableFramePagesId.put(tbName,new ArrayList<>());
     }
 
     //table record -> memory
     @Override
     public void storeTable(String tableName, byte[] data) {
 
-        if (!tableFramesNum.containsKey(tableName)){
+        if (!tableFramePagesId.containsKey(tableName)){
             throw new IllegalArgumentException("Try to store table "+tableName+" which is unexisted.");
         }
         ArrayList<Integer> pagesInBufferPool = bfm.tablePageMap.get(tableName);

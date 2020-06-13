@@ -1,6 +1,7 @@
 package cn.edu.thssdb.pagefile;
 
 import cn.edu.thssdb.exception.NoPageCanBeReplacedException;
+import cn.edu.thssdb.schema.TableInfo;
 import cn.edu.thssdb.utils.Global;
 
 import java.util.ArrayList;
@@ -13,7 +14,6 @@ public class BufferManager implements PageFileConst {
     protected FrameDescription[] frameTab;
     protected HashMap<Integer, FrameDescription> pageMap;
     protected Replacer replacer;
-    public HashMap<String, ArrayList<Integer>> tablePageMap;//记录了每张表有哪些页在buffer pool里
     private String databaseName;
 
     public BufferManager(String dbName, int numPages) {
@@ -26,7 +26,6 @@ public class BufferManager implements PageFileConst {
         pageMap = new HashMap<Integer, FrameDescription>(numPages);
         replacer = new Replacer(numPages);
         databaseName = dbName;
-        tablePageMap = new HashMap<>(0);
     }
 
 

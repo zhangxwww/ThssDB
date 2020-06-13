@@ -6,7 +6,7 @@ public class FrameDescription implements PageFileConst{
     public int pinCount;
     public boolean isDirty;
     public int state;
-    public String tableName;
+
 
     public FrameDescription(int index) {
         this.index = index;
@@ -14,7 +14,6 @@ public class FrameDescription implements PageFileConst{
         this.pinCount = 0;
         this.isDirty = false;
         this.state = 0;
-        this.tableName = null;
     }
 
     public boolean isPinned(){return pinCount != 0;}
