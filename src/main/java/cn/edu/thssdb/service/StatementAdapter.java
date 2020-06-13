@@ -106,11 +106,8 @@ public class StatementAdapter {
         //插入整行
         int attrsNum = tableAttrsNum(tbName);
         if (attrValues.length != attrsNum) {
-            //TODO 异常处理 所给values个数不对
-            System.out.println("Insert Failure! valueEntries.size()! = attrsNum");
             throw new WrongInsertArgumentNumException();
         } else {
-            //TODO 插入整行
             Table t = database.getTable(tbName);
             lockData(t, true);
 
@@ -667,9 +664,8 @@ public class StatementAdapter {
         } else {
             t.getLock().readLock().lock();
         }
-        if (isInTransaction) {
+        if (isInTransaction && isWrite) {
             this.exclusiveLockedTables.add(t);
-
         }
     }
 
