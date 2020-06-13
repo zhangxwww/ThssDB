@@ -39,9 +39,16 @@ public class Visitor extends SQLBaseVisitor {
 			int length = -1;
 			int isPrimary = 0;
 			boolean notNull = false;
-			if (constraints.size() > 0 && constraints.get(0).getText().toUpperCase().equals("NOTNULL")) {
-				notNull = true;
+			boolean unique = false;
+			int nConstraints = constraints.size();
+			for (int j = 0; j < nConstraints; ++j) {
+				if (constraints.get(j).getText().toUpperCase().equals("NOTNULL")) {
+					notNull = true;
+				} else if (constraints.get(j).getText().toUpperCase().equals("UNIQUE")) {
+					unique = true;
+				}
 			}
+
 			if (typeName.startsWith("STRING")) {
 				type = ColumnType.STRING;
 				length = Integer.parseInt(c.type_name().NUMERIC_LITERAL().getText());
@@ -51,7 +58,7 @@ public class Visitor extends SQLBaseVisitor {
 			if (primary.equals(colName)) {
 				isPrimary = 1;
 			}
-			cols[i] = new Column(colName, type, isPrimary, notNull, length);
+			cols[i] = new Column(colName, type, isPrimary, notNull, length, unique);
 		}
 		statementAdapter.createTable(tableName, cols);
 		return null;
@@ -241,6 +248,13 @@ public class Visitor extends SQLBaseVisitor {
 	@Override
 	public Object visitShow_meta_stmt(SQLParser.Show_meta_stmtContext ctx) {
 		// return super.visitShow_meta_stmt(ctx);
+		String tableName = ctx.table_name().getText().toUpperCase();
+		statementAdapter.showTable(tableName);
+		return null;
+	}
+
+	@Override
+	public Object visitShow_table_stmt(SQLParser.Show_table_stmtContext ctx) {
 		String tableName = ctx.table_name().getText().toUpperCase();
 		statementAdapter.showTable(tableName);
 		return null;

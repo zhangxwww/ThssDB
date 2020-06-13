@@ -20,24 +20,6 @@ public class QueryTable implements Iterator<Row> {
     private Row nextRow;
     private int width;
 
-    QueryTable(AttrCompare attrCompare, Table table, String attr1, String attr2) {
-        // TODO
-        this.attrCompare = attrCompare;
-        this.iterator = table.iterator();
-        List<Column> columns = table.getColumns();
-        int numColumns = columns.size();
-        for (int i = 0; i < numColumns; i++) {
-            Column c = columns.get(i);
-            if (c.getName().toUpperCase().equals(attr1.toUpperCase())) {
-                this.index1 = i;
-            } else if (c.getName().toUpperCase().equals(attr2.toUpperCase())) {
-                this.index2 = i;
-            }
-        }
-        this.isAttrInstCmp = false;
-        this.needWhere = true;
-    }
-
     public QueryTable(AttrCompare attrCompare, Table table, String attr, Entry instant) {
         needWhere = attrCompare != null;
         width = table.getColumns().size();

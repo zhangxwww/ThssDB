@@ -153,11 +153,9 @@ public class QueryResult {
                 }
             }
             if (!found) {
-                Entry[] newEntries = new Entry[r2Width];
-                newEntries[joinIndex2] = e1;
                 LinkedList<Row> tmp = new LinkedList<Row>() {{
                     add(r);
-                    add(new Row(newEntries));
+                    add(new Row(new Entry[r2Width]));
                 }};
                 joinedRows.add(combineRow(tmp));
             }
@@ -188,10 +186,8 @@ public class QueryResult {
                 }
             }
             if (!found) {
-                Entry[] newEntries = new Entry[r1Width];
-                newEntries[joinIndex1] = e2;
                 LinkedList<Row> tmp = new LinkedList<Row>() {{
-                    add(new Row(newEntries));
+                    add(new Row(new Entry[r1Width]));
                     add(rr);
                 }};
                 joinedRows.add(combineRow(tmp));

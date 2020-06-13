@@ -123,11 +123,18 @@ public class StatementAdapter {
             for (int i = 0; i < attrs.size(); i++) {
                 Column tmpAttr = attrs.get(i);
                 ColumnType attrType = tmpAttr.getType();
-                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength()) {
+                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength() + 2) {
                     // 检查value长度
+                    // +2: 'xxx' length=3
                     throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                 }
-                entries[i] = parseValue(attrType, attrValues[i]);
+                Entry e = parseValue(attrType, attrValues[i]);
+                if (tmpAttr.isUnique()) {
+                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                        throw new DuplicateKeyException();
+                    }
+                }
+                entries[i] = e;
             }
             t.insert(new Row(entries));
         }
@@ -169,8 +176,9 @@ public class StatementAdapter {
                 for (int j = 0; j < attrNames.length; j++) {
                     if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
                         ColumnType attrType = tmpAttr.getType();
-                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength()) {
+                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength() + 2) {
                             // 检查value长度
+                            // +2: 'xxx' length=3
                             throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                         }
                         e = parseValue(attrType, attrValues[j]);
@@ -180,6 +188,11 @@ public class StatementAdapter {
                 if (tmpAttr.isNotNull() && e == null) {
                     //TODO 异常处理 不满足 NOTNULL 属性
                     throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
+                }
+                if (tmpAttr.isUnique()) {
+                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                        throw new DuplicateKeyException();
+                    }
                 }
                 entries[i] = e;
             }
@@ -195,7 +208,7 @@ public class StatementAdapter {
             t.getLock().writeLock().lock();
             this.exclusiveLockedTables.add(t);
         }
-        QueryTable q = getQueryTable(tbName, wherecond);
+        QueryTable q = getQueryTable(tbName, wherecond, null);
         while (q.hasNext()) {
             Row r = q.next();
             if (isInTransaction) {
@@ -242,7 +255,7 @@ public class StatementAdapter {
         }
         assert cType != null;
         Entry e = parseValue(cType, attrValue);
-        QueryTable q = getQueryTable(tbName, wherecond);
+        QueryTable q = getQueryTable(tbName, wherecond, null);
         while (q.hasNext()) {
             Row r = q.next();
             if (isInTransaction) {
@@ -284,17 +297,24 @@ public class StatementAdapter {
         boolean needJoin;
         JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
         int jIndex1 = -1, jIndex2 = -1;
+        List<Boolean> bothFound = new ArrayList<>();
         if (table2 == null || table2.equals("") || jc == null) {
             // 不需要join
-            q = new QueryTable[]{getQueryTable(table1, wc)};
+            q = new QueryTable[]{getQueryTable(table1, wc, bothFound)};
             needJoin = false;
+            if (bothFound.size() > 0) {
+                throw new AttrNotExistsException();
+            }
         } else {
             // 检查where中是否存在歧义
             if (!checkAmbiguousColumnForWhere(table1, table2, wc)) {
                 // TODO throw error: ambiguous column in where condition
                 throw new AmbiguousColumnException();
             }
-            q = new QueryTable[]{getQueryTable(table1, wc), getQueryTable(table2, wc)};
+            q = new QueryTable[]{getQueryTable(table1, wc, bothFound), getQueryTable(table2, wc, bothFound)};
+            if (bothFound.size() > 1) {
+                throw new AttrNotExistsException();
+            }
             // 哪两列被join
             List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
             jIndex1 = joinIndex.get(0);
@@ -325,7 +345,7 @@ public class StatementAdapter {
         resultType = ResultType.TABLE;
     }
 
-    private QueryTable getQueryTable(String table, WhereCondition wc) {
+    private QueryTable getQueryTable(String table, WhereCondition wc, List<Boolean> bothFound) {
         QueryTable q;
         Table t = database.getTable(table);
         if (wc != null && (wc.tableName.equals(table) || wc.tableName.equals(""))) {
@@ -341,18 +361,25 @@ public class StatementAdapter {
                 }
             }
             if (!found) {
-                // TODO throw error: attr not in columns
-                throw new AttrNotExistsException();
+                if (wc.tableName.equals(table)) {
+                    // TODO throw error: attr not in columns
+                    throw new AttrNotExistsException();
+                } else if (bothFound != null) {
+                    bothFound.add(false);
+                }
             }
-            String value = wc.val;
-            Entry instant = parseValue(cType, value);
-            q = new QueryTable(compare, t, attr, instant);
+            if (found) {
+                String value = wc.val;
+                Entry instant = parseValue(cType, value);
+                q = new QueryTable(compare, t, attr, instant);
+            } else {
+                q = new QueryTable(null, t, null, null);
+            }
         } else {
             q = new QueryTable(null, t, null, null);
         }
         return q;
     }
-
 
     private Entry parseValue(ColumnType type, String value) {
         Entry instant;
@@ -371,6 +398,8 @@ public class StatementAdapter {
                     instant = new Entry(Double.parseDouble(value));
                     break;
                 case STRING:
+                    instant = new Entry(value.substring(1, value.length() - 1));
+                    break;
                 default:
                     instant = new Entry(value);
                     break;
@@ -609,7 +638,6 @@ public class StatementAdapter {
         }
         return true;
     }
-
 
 
     private int findAttrIndexInColumns(List<Column> columns, String attr) {

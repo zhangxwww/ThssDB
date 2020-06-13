@@ -122,6 +122,8 @@ public class IServiceHandler implements IService.Iface {
                 code = e.code();
             } catch (NotNullAttributeAssignedNullException e) {
                 code = e.code();
+            } catch (SyntaxErrorException e) {
+                code = e.code();
             }
             resp.setStatus(new Status(code));
             resp.setIsAbort(isAbort);
