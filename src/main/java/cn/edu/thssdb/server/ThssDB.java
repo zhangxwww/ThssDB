@@ -62,14 +62,12 @@ public class ThssDB {
 		try {
 			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
 			server = new TSimpleServer(new TServer.Args(transport).processor(processor));
-			/*
-			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
-			TThreadPoolServer.Args tArgs = new TThreadPoolServer.Args(transport);
-			tArgs.processor(processor);
-//			客户端协议要一致
-			tArgs.protocolFactory(new TBinaryProtocol.Factory());
-			server = new TThreadPoolServer(tArgs);
-			 */
+//			transport = new TServerSocket(Global.DEFAULT_SERVER_PORT);
+//			TThreadPoolServer.Args tArgs = new TThreadPoolServer.Args(transport);
+//			tArgs.processor(processor);
+////			客户端协议要一致
+//			tArgs.protocolFactory(new TBinaryProtocol.Factory());
+//			server = new TThreadPoolServer(tArgs);
 			logger.info("Starting ThssDB ...");
 			server.serve();
 		} catch (TTransportException e) {

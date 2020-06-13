@@ -32,11 +32,10 @@ public class DiskManager implements PageFileConst {
         String fileName = this.bufferPath + fileNumber;
         File dest = new File(fileName);
         try {
-            try (FileOutputStream outputStream = new FileOutputStream(dest, false)) {
-                FileChannel channel = outputStream.getChannel();
-                channel.position(offset);
-                channel.write(ByteBuffer.wrap(data));
-            }
+            RandomAccessFile outputStream = new RandomAccessFile(dest, "rw");
+            outputStream.seek(offset);
+            outputStream.write(data, 0, PAGE_SIZE);
+            outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -45,7 +44,7 @@ public class DiskManager implements PageFileConst {
     public byte[] readPage(int frameNumber) {
         int fileNumber = (int)(frameNumber / NUM_FILE_PAGES);
         int bias = frameNumber % NUM_FILE_PAGES;
-        int offset = (bias - 1) * PAGE_SIZE;
+        int offset = bias * PAGE_SIZE;
         String fileName = this.bufferPath + fileNumber;
         File src = new File(fileName);
         byte[] result = null;
@@ -55,8 +54,8 @@ public class DiskManager implements PageFileConst {
             BufferedInputStream inputStream = new BufferedInputStream(fileInputStream);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             byte[] flush = new byte[PAGE_SIZE];
-            int len = -1;
-            while ((len = inputStream.read(flush)) != -1) {
+            int len = inputStream.read(flush);
+            if (len != -1){
                 outputStream.write(flush, 0, len);
             }
             outputStream.flush();
