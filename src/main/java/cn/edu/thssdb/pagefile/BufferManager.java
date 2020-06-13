@@ -37,7 +37,7 @@ public class BufferManager implements PageFileConst {
             return availablePages.remove(availablePages.size() - 1);
         } else {
             try {
-                int replacedPage = replacer.pickVictims(frameTab,1)[0];
+                int replacedPage = replacer.pickVictim(frameTab);
                 pinPage(replacedPage);
                 flushPage(replacedPage);
                 unpinPage(replacedPage);
@@ -64,6 +64,7 @@ public class BufferManager implements PageFileConst {
                 // cache hit
                 cacheHit = true;
                 if (!bufferPool[i].compareContent(data)) {
+                    replacer.visitPage(i);
                     pinPage(i);
                     bufferPool[i].setContent(data);
                     frameTab[i].setDirty(true);
@@ -78,6 +79,7 @@ public class BufferManager implements PageFileConst {
             frameTab[pageId].setFrameNumber(frameNumber);
             frameTab[pageId].setDirty(true);
             bufferPool[pageId].setContent(data);
+            replacer.visitPage(pageId);
             unpinPage(pageId);
         }
     }
@@ -89,6 +91,7 @@ public class BufferManager implements PageFileConst {
             frameTab[pageId].setFrameNumber(frameNumber);
             frameTab[pageId].setDirty(true);
             bufferPool[pageId].setContent(data);
+            replacer.visitPage(pageId);
             unpinPage(pageId);
         } else {
             System.out.println("Unable to allocate new pages");

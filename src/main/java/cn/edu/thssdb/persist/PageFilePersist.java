@@ -20,8 +20,8 @@ public class PageFilePersist implements PersistenceOperation {
 	private HashMap<String, TableInfo> tableInfos;
 
 	// initialize buffer pool manager and disk manager
-	public PageFilePersist(String dbName, int numPages, HashMap<String, TableInfo> tableInfos) {
-		this.dsm = new DiskManager(Global.ROOT_PATH + dbName);
+	public PageFilePersist(String dbName, int numPages, HashMap<String, TableInfo> tableInfos, int maxPageFrameNumber) {
+		this.dsm = new DiskManager(Global.ROOT_PATH + dbName, maxPageFrameNumber);
 		this.bfm = new BufferManager(dbName, numPages, dsm);
 		this.tableInfos = tableInfos;
 	}

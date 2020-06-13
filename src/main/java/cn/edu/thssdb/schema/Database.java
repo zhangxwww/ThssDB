@@ -50,6 +50,7 @@ public class Database {
 		// store table infos (meta data)
 		try {
 			ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH + name + "/manage", false));
+			objectOutputStream.writeInt(maxPageFrameNumber);
 			for (TableInfo tbInfo : tableInfos.values()) {
 				objectOutputStream.writeObject(tbInfo);
 			}
@@ -120,6 +121,7 @@ public class Database {
 				manageFile.createNewFile();
 			} else {
 				ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
+				maxPageFrameNumber = ois.readInt();
 				while (true) {
 					TableInfo tbInfo = (TableInfo) ois.readObject();
 					Column[] cols = new Column[tbInfo.columns.size()];

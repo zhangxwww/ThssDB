@@ -6,8 +6,9 @@ import java.util.Arrays;
 public class DiskManager implements PageFileConst {
     private String bufferPath;
     private int maxFrameNumber;
-    public DiskManager(String bufferPath) {
+    public DiskManager(String bufferPath, int maxPageFrameNumber) {
         this.bufferPath = bufferPath;
+        this.maxFrameNumber = maxPageFrameNumber;
     }
 
     public int allocatePage() {
