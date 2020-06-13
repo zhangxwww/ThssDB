@@ -29,16 +29,16 @@ public class StatementExecuter {
     }
 
     public void execute(String statement) {
-        if (statement.toUpperCase().trim().equals(transaction_text)) {
+        if (statement.toUpperCase().trim().startsWith(transaction_text)) {
             if (!this.adapter.getInTransaction()) {
                 this.adapter.initializeTransaction();
             } // TODO: ERROR HANDLING
-        } else if (statement.toUpperCase().trim().equals(commit_text)) {
+        } else if (statement.toUpperCase().trim().startsWith(commit_text)) {
             if (this.adapter.getInTransaction()) {
                 this.adapter.getLogHandler().commit(sessionId);
                 this.adapter.terminateTransaction();
             }
-        } else if (statement.toUpperCase().trim().equals(rollback_text)) {
+        } else if (statement.toUpperCase().trim().startsWith(rollback_text)) {
             if (this.adapter.getInTransaction()) {
                 this.database.recoverUncommittedCmd(this.sessionId);
                 this.adapter.terminateTransaction();

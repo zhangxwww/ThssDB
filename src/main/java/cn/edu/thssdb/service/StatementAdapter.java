@@ -6,6 +6,7 @@ import cn.edu.thssdb.schema.Column;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Table;
 import cn.edu.thssdb.type.ColumnType;
+import com.sun.scenario.animation.shared.InfiniteClipEnvelope;
 import javafx.scene.control.Tab;
 import javafx.util.Pair;
 
@@ -111,39 +112,41 @@ public class StatementAdapter {
         } else {
             //TODO 插入整行
             Table t = database.getTable(tbName);
-            if (this.isInTransaction) {
-                t.getLock().writeLock().lock();
-                this.exclusiveLockedTables.add(t);
-                System.out.println("isIntransaction:" + String.valueOf(isInTransaction));
+            lockData(t, true);
 
-                logHandler.addInsertRowLog(transactionID, tbName, t.getPrimaryKeyName(), attrValues[t.getPrimaryKeyIndex()]);
-            }
-            ArrayList<Column> attrs = t.getColumns();
-            Entry[] entries = new Entry[attrsNum];
-            for (int i = 0; i < attrs.size(); i++) {
-                Column tmpAttr = attrs.get(i);
-                ColumnType attrType = tmpAttr.getType();
-                if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength() + 2) {
-                    // 检查value长度
-                    // +2: 'xxx' length=3
-                    throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+            try {
+                if (this.isInTransaction) {
+                    logHandler.addInsertRowLog(transactionID, tbName, t.getPrimaryKeyName(), attrValues[t.getPrimaryKeyIndex()]);
                 }
-                Entry e = parseValue(attrType, attrValues[i]);
-                if (tmpAttr.isUnique()) {
-                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
-                        throw new DuplicateKeyException();
+
+                ArrayList<Column> attrs = t.getColumns();
+                Entry[] entries = new Entry[attrsNum];
+                for (int i = 0; i < attrs.size(); i++) {
+                    Column tmpAttr = attrs.get(i);
+                    ColumnType attrType = tmpAttr.getType();
+                    if (attrType == ColumnType.STRING && attrValues[i].length() > tmpAttr.getMaxLength() + 2) {
+                        // 检查value长度
+                        // +2: 'xxx' length=3
+                        throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
                     }
+                    Entry e = parseValue(attrType, attrValues[i]);
+                    if (tmpAttr.isUnique()) {
+                        if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                            throw new DuplicateKeyException();
+                        }
+                    }
+                    entries[i] = e;
                 }
-                entries[i] = e;
+                t.insert(new Row(entries));
+            }finally {
+                unlockData(t, true);
             }
-            t.insert(new Row(entries));
         }
     }
 
     public void insertTableRow(String tbName, String[] attrNames, String[] attrValues) {
         //value的个数要与colomn个数一致
         if (attrNames.length != attrValues.length) {
-            //TODO 异常处理 所给长度不一致
             throw new WrongInsertArgumentNumException();
         } else {
             String primaryKeyName = getTablePrimaryAttr(tbName);
@@ -157,46 +160,49 @@ public class StatementAdapter {
                 }
             }
             if (!hasPrimaryKey) {
-                //TODO 异常处理 插入的属性中没有主键
                 throw new PrimaryKeyRequiredException();
             }
 
             //插入一条Row
             Table t = database.getTable(tbName);
-            if (this.isInTransaction) {
-                t.getLock().writeLock().lock();
-                this.exclusiveLockedTables.add(t);
-                logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValues[primaryKeyIndex]);
-            }
-            ArrayList<Column> attrs = t.getColumns();
-            Entry[] entries = new Entry[attrs.size()];
-            for (int i = 0; i < attrs.size(); i++) {
-                Column tmpAttr = attrs.get(i);
-                Entry e = null;
-                for (int j = 0; j < attrNames.length; j++) {
-                    if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
-                        ColumnType attrType = tmpAttr.getType();
-                        if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength() + 2) {
-                            // 检查value长度
-                            // +2: 'xxx' length=3
-                            throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+            lockData(t, true);
+            try {
+                if (this.isInTransaction) {
+                    logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValues[primaryKeyIndex]);
+                }
+
+                ArrayList<Column> attrs = t.getColumns();
+                Entry[] entries = new Entry[attrs.size()];
+                for (int i = 0; i < attrs.size(); i++) {
+                    Column tmpAttr = attrs.get(i);
+                    Entry e = null;
+                    for (int j = 0; j < attrNames.length; j++) {
+                        if (attrNames[j].toUpperCase().equals(tmpAttr.getName().toUpperCase())) {
+                            ColumnType attrType = tmpAttr.getType();
+                            if (attrType == ColumnType.STRING && attrValues[j].length() > tmpAttr.getMaxLength() + 2) {
+                                // 检查value长度
+                                // +2: 'xxx' length=3
+                                throw new StringValueExceedLengthException(tmpAttr.getName(), tmpAttr.getMaxLength());
+                            }
+                            e = parseValue(attrType, attrValues[j]);
+                            break;
                         }
-                        e = parseValue(attrType, attrValues[j]);
-                        break;
                     }
-                }
-                if (tmpAttr.isNotNull() && e == null) {
-                    //TODO 异常处理 不满足 NOTNULL 属性
-                    throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
-                }
-                if (tmpAttr.isUnique()) {
-                    if (t.contains(e, tmpAttr.isPrimary(), i)) {
-                        throw new DuplicateKeyException();
+                    if (tmpAttr.isNotNull() && e == null) {
+                        //TODO 异常处理 不满足 NOTNULL 属性
+                        throw new NotNullAttributeAssignedNullException(tmpAttr.getName());
                     }
+                    if (tmpAttr.isUnique()) {
+                        if (t.contains(e, tmpAttr.isPrimary(), i)) {
+                            throw new DuplicateKeyException();
+                        }
+                    }
+                    entries[i] = e;
                 }
-                entries[i] = e;
+                t.insert(new Row(entries));
+            }finally {
+                unlockData(t, true);
             }
-            t.insert(new Row(entries));
         }
     }
 
@@ -204,22 +210,23 @@ public class StatementAdapter {
     public void delFromTable(String tbName, WhereCondition wherecond) {
         //whereCondition可能为空
         Table t = database.getTable(tbName);
-        if (this.isInTransaction) {
-            t.getLock().writeLock().lock();
-            this.exclusiveLockedTables.add(t);
-        }
-        QueryTable q = getQueryTable(tbName, wherecond, null);
-        while (q.hasNext()) {
-            Row r = q.next();
-            if (isInTransaction) {
-                int attrNum = tableAttrsNum(tbName);
-                String[] attrValues = new String[attrNum];
-                for (int i = 0; i < attrNum; i++) {
-                    attrValues[i] = r.getEntry(i);
+        lockData(t, true);
+        try {
+            QueryTable q = getQueryTable(tbName, wherecond, null);
+            while (q.hasNext()) {
+                Row r = q.next();
+                if (isInTransaction) {
+                    int attrNum = tableAttrsNum(tbName);
+                    String[] attrValues = new String[attrNum];
+                    for (int i = 0; i < attrNum; i++) {
+                        attrValues[i] = r.getEntry(i);
+                    }
+                    logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
                 }
-                logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
+                t.delete(r);
             }
-            t.delete(r);
+        } finally {
+            unlockData(t, true);
         }
     }
 
@@ -234,11 +241,7 @@ public class StatementAdapter {
 
     public void updateTable(String tbName, String colName, String attrValue, WhereCondition wherecond) {
         Table t = database.getTable(tbName);
-        if (this.isInTransaction) {
-            t.getLock().writeLock().lock();
-            this.exclusiveLockedTables.add(t);
-        }
-
+        lockData(t, true);
         ColumnType cType = null;
         int attrIndex = -1;
         for (int i = 0; i < t.getColumns().size(); i++) {
@@ -250,32 +253,38 @@ public class StatementAdapter {
             }
         }
         if (attrIndex == -1) {
-            // TODO throw error: attr not in columns
+            unlockData(t,true);
             throw new AttrNotExistsException();
         }
         assert cType != null;
-        Entry e = parseValue(cType, attrValue);
-        QueryTable q = getQueryTable(tbName, wherecond, null);
-        while (q.hasNext()) {
-            Row r = q.next();
-            if (isInTransaction) {
-                Row oldRow = r;
-                int attrNum = tableAttrsNum(tbName);
-                String[] attrValues = new String[attrNum];
-                for (int i = 0; i < attrNum; i++) {
-                    attrValues[i] = r.getEntry(i);
+
+        try {
+            Entry e = parseValue(cType, attrValue);
+            QueryTable q = getQueryTable(tbName, wherecond, null);
+            while (q.hasNext()) {
+                Row r = q.next();
+                if (isInTransaction) {
+                    Row oldRow = r;
+                    int attrNum = tableAttrsNum(tbName);
+                    String[] attrValues = new String[attrNum];
+                    for (int i = 0; i < attrNum; i++) {
+                        attrValues[i] = r.getEntry(i);
+                    }
+                    logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
+                    String primaryKeyName = t.getPrimaryKeyName();
+                    if (primaryKeyName.toUpperCase().equals(colName)) {
+                        //如果要update的正好是primaryKey
+                        logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValue);
+                    } else {
+                        logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, r.getEntry(t.getPrimaryKeyIndex()));
+                    }
                 }
-                logHandler.addDeleteRowLog(transactionID, tbName, attrNum, attrValues);
-                String primaryKeyName = t.getPrimaryKeyName();
-                if (primaryKeyName.toUpperCase().equals(colName)) {
-                    //如果要update的正好是primaryKey
-                    logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, attrValue);
-                } else {
-                    logHandler.addInsertRowLog(transactionID, tbName, primaryKeyName, r.getEntry(t.getPrimaryKeyIndex()));
-                }
+                t.update(attrIndex, e, r);
             }
-            t.update(attrIndex, e, r);
+        }finally {
+            unlockData(t, true);
         }
+
     }
 
 
@@ -285,64 +294,68 @@ public class StatementAdapter {
                        WhereCondition wc,
                        boolean distinct,
                        OrderBy ob) {
-        // TODO
-        if (this.isInTransaction) {
-            database.getTable(table1).getLock().readLock().lock();
-            if (table2 != null && table2.length() > 0) {
-                database.getTable(table2).getLock().readLock().lock();
-            }
+
+
+        lockData(database.getTable(table1), false);
+        if (table2 != null && table2.length() > 0) {
+            lockData(database.getTable(table2), false);
         }
 
-        QueryTable[] q;
-        boolean needJoin;
-        JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
-        int jIndex1 = -1, jIndex2 = -1;
-        List<Boolean> bothFound = new ArrayList<>();
-        if (table2 == null || table2.equals("") || jc == null) {
-            // 不需要join
-            q = new QueryTable[]{getQueryTable(table1, wc, bothFound)};
-            needJoin = false;
-            if (bothFound.size() > 0) {
-                throw new AttrNotExistsException();
+        try {
+            QueryTable[] q;
+            boolean needJoin;
+            JoinCondition.JoinType joinType = JoinCondition.JoinType.INNER;
+            int jIndex1 = -1, jIndex2 = -1;
+            List<Boolean> bothFound = new ArrayList<>();
+            if (table2 == null || table2.equals("") || jc == null) {
+                // 不需要join
+                q = new QueryTable[]{getQueryTable(table1, wc, bothFound)};
+                needJoin = false;
+                if (bothFound.size() > 0) {
+                    throw new AttrNotExistsException();
+                }
+
+            } else {
+                // 检查where中是否存在歧义
+                if (!checkAmbiguousColumnForWhere(table1, table2, wc)) {
+                    throw new AmbiguousColumnException();
+                }
+                q = new QueryTable[]{getQueryTable(table1, wc, bothFound), getQueryTable(table2, wc, bothFound)};
+
+                if (bothFound.size() > 1) {
+                    throw new AttrNotExistsException();
+                }
+                // 哪两列被join
+                List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
+
+                jIndex1 = joinIndex.get(0);
+                jIndex2 = joinIndex.get(1);
+                joinType = jc.type;
+                needJoin = true;
             }
-        } else {
-            // 检查where中是否存在歧义
-            if (!checkAmbiguousColumnForWhere(table1, table2, wc)) {
-                // TODO throw error: ambiguous column in where condition
-                throw new AmbiguousColumnException();
+
+            // select哪些列
+
+            List<Integer> index = getSelectIndex(results, table1, table2);
+            // Order by
+            int orderByIndex;
+            boolean desc;
+            if (ob != null) {
+                orderByIndex = getOrderByIndex(table1, table2, ob, index);
+                desc = ob.desc;
+            } else {
+                orderByIndex = -1;
+                desc = false;
             }
-            q = new QueryTable[]{getQueryTable(table1, wc, bothFound), getQueryTable(table2, wc, bothFound)};
-            if (bothFound.size() > 1) {
-                throw new AttrNotExistsException();
-            }
-            // 哪两列被join
-            List<Integer> joinIndex = getJoinIndex(table1, table2, jc);
-            jIndex1 = joinIndex.get(0);
-            jIndex2 = joinIndex.get(1);
-            joinType = jc.type;
-            needJoin = true;
-        }
-        // select哪些列
-        List<Integer> index = getSelectIndex(results, table1, table2);
-        // Order by
-        int orderByIndex;
-        boolean desc;
-        if (ob != null) {
-            orderByIndex = getOrderByIndex(table1, table2, ob, index);
-            desc = ob.desc;
-        } else {
-            orderByIndex = -1;
-            desc = false;
-        }
-        List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType, orderByIndex, desc, distinct).query();
-        generateTmpTable(qResult, table1, table2, index);
-        if (this.isInTransaction) {
-            database.getTable(table1).getLock().readLock().unlock();
+            List<Row> qResult = new QueryResult(q, index, needJoin, jIndex1, jIndex2, joinType, orderByIndex, desc, distinct).query();
+            generateTmpTable(qResult, table1, table2, index);
+            resultType = ResultType.TABLE;
+        }finally {
+            unlockData(database.getTable(table1), false);
             if (table2 != null && table2.length() > 0) {
-                database.getTable(table2).getLock().readLock().unlock();
+                unlockData(database.getTable(table2), false);
             }
         }
-        resultType = ResultType.TABLE;
     }
 
     private QueryTable getQueryTable(String table, WhereCondition wc, List<Boolean> bothFound) {
@@ -473,7 +486,6 @@ public class StatementAdapter {
             index = findAttrIndexInColumns(c2, jc.attr1);
             results.add(index);
         } else {
-            // TODO throw error: table name can't match
             throw new TableNotExistsException();
         }
         return results;
@@ -648,4 +660,32 @@ public class StatementAdapter {
         }
         throw new AttrNotExistsException();
     }
+
+    private void lockData(Table t, boolean isWrite) {
+        if (isWrite) {
+            t.getLock().writeLock().lock();
+        } else {
+            t.getLock().readLock().lock();
+        }
+        if (isInTransaction) {
+            this.exclusiveLockedTables.add(t);
+
+        }
+    }
+
+    private void unlockData(Table t, boolean isWrite) {
+        if (!isInTransaction) {
+            if (isWrite) {
+                t.getLock().writeLock().unlock();
+            } else {
+                t.getLock().readLock().unlock();
+            }
+        } else {
+            if (!isWrite) {
+                t.getLock().readLock().unlock();
+            }
+        }
+    }
+
+
 }

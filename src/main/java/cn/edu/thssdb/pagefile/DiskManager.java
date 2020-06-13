@@ -22,7 +22,7 @@ public class DiskManager implements PageFileConst {
     public void deallocatePage(int frameNumber) throws IOException {
         String fileName = this.bufferPath + String.valueOf(frameNumber);
         File dest = new File(fileName);
-        if (!dest.exists() || dest.isFile()) {
+        if (!dest.exists() || !dest.isFile()) {
             throw new IllegalArgumentException("Invalid page to delete from disk!");
         }
         else {

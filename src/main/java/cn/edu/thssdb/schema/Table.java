@@ -82,31 +82,14 @@ public class Table implements Iterable<Row> {
         index.remove(e);
     }
 
-    public void delete(Iterator<Row> iterator) {
-        while (iterator.hasNext()) {
-            Row r = iterator.next();
-            delete(r);
-        }
-    }
-
     public void update(int attrIndex, Entry attrValue, Row row) {
-        // TODO
         Entry e = row.getEntries().get(primaryIndex);
         row.getEntries().set(attrIndex, attrValue);
         index.update(e, row);
     }
 
-    public void update(int attrIndex, Entry attrValue, Iterator<Row> rows) {
-        // TODO
-        for (; rows.hasNext(); ) {
-            Row r = rows.next();
-            update(attrIndex, attrValue, r);
-        }
-    }
-
     ////   Make the rows to bytes
     public byte[] serialize() {
-        // TODO
         try {
             ByteArrayOutputStream bOutStream = new ByteArrayOutputStream();
             ObjectOutputStream oos = new ObjectOutputStream(bOutStream);
@@ -117,7 +100,6 @@ public class Table implements Iterable<Row> {
             }
             byte[] bData = bOutStream.toByteArray();
             return bData;
-//            persistManager.storeTable(tableName, bData);
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -126,7 +108,6 @@ public class Table implements Iterable<Row> {
     }
 
     private ArrayList<Row> deserialize(byte[] bData) {
-        // TODO
         ArrayList<Row> rows = new ArrayList<Row>();
         index = new BPlusTree<Entry, Row>();
         try {
@@ -179,16 +160,6 @@ public class Table implements Iterable<Row> {
 
     public int getPrimaryKeyIndex() {
         return this.primaryIndex;
-    }
-
-    public int getAttributeIndex(String attrName) {
-        int index = -1;
-        for (int i = 0; i < this.columns.size(); i++) {
-            if (this.columns.get(i).getName().toUpperCase().equals(attrName.toUpperCase())) {
-                index = i;
-            }
-        }
-        return index;
     }
 
     private class TableIterator implements Iterator<Row> {

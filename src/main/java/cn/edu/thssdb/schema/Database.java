@@ -146,7 +146,7 @@ public class Database {
 			if (ois != null) {
 				ois.close();
 			}
-			persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM, tableInfos);
+			persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM, tableInfos, maxPageFrameNumber);
 			System.out.println("recover database: " + name);
 
 			System.out.println("tableInfo: ");
