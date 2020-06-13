@@ -1,13 +1,12 @@
 package cn.edu.thssdb.service;
 
+import cn.edu.thssdb.exception.SyntaxErrorException;
 import cn.edu.thssdb.parser.SQLLexer;
 import cn.edu.thssdb.parser.SQLParser;
 import cn.edu.thssdb.parser.Visitor;
 import cn.edu.thssdb.schema.Database;
 import cn.edu.thssdb.schema.Manager;
-import org.antlr.v4.runtime.CharStream;
-import org.antlr.v4.runtime.CharStreams;
-import org.antlr.v4.runtime.CommonTokenStream;
+import org.antlr.v4.runtime.*;
 
 import java.util.List;
 import java.util.regex.Matcher;
@@ -53,6 +52,14 @@ public class StatementExecuter {
             SQLLexer lexer = new SQLLexer(input);
             CommonTokenStream tokens = new CommonTokenStream(lexer);
             SQLParser parser = new SQLParser(tokens);
+            parser.removeErrorListeners();
+            parser.addErrorListener(new BaseErrorListener() {
+                @Override
+                public void syntaxError(Recognizer<?, ?> recognizer, Object offendingSymbol, int line, int charPositionInLine, String msg, RecognitionException e) {
+                    super.syntaxError(recognizer, offendingSymbol, line, charPositionInLine, msg, e);
+                    throw new SyntaxErrorException();
+                }
+            });
             Visitor visitor = new Visitor(adapter);
             SQLParser.ParseContext ctxTest = parser.parse();
             visitor.visitParse(ctxTest);
