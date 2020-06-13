@@ -45,10 +45,6 @@ public class DiskManager implements PageFileConst {
     public byte[] readPage(int frameNumber) {
         int fileNumber = (int)(frameNumber / NUM_FILE_PAGES);
         int bias = frameNumber % NUM_FILE_PAGES;
-        if (bias == 0) {
-            fileNumber -= 1;
-            bias = NUM_FILE_PAGES;
-        }
         int offset = (bias - 1) * PAGE_SIZE;
         String fileName = this.bufferPath + fileNumber;
         File src = new File(fileName);
