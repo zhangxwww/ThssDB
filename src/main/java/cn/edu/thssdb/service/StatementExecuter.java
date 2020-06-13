@@ -77,7 +77,7 @@ public class StatementExecuter {
     }
 
     private String parseSwitchDatabaseStatement(String statement) {
-        String pattern = "USE\\s+(.*);?";
+        String pattern = "USE\\s+([^;]*);?";
         Pattern r = Pattern.compile(pattern);
         Matcher m = r.matcher(statement.toUpperCase().trim());
         if (m.find()) {
