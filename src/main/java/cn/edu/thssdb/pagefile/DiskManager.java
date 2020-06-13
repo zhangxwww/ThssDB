@@ -1,6 +1,8 @@
 package cn.edu.thssdb.pagefile;
 
 import java.io.*;
+import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.util.Arrays;
 
 public class DiskManager implements PageFileConst {
@@ -20,43 +22,41 @@ public class DiskManager implements PageFileConst {
     }
 
     public void deallocatePage(int frameNumber) throws IOException {
-        String fileName = this.bufferPath + String.valueOf(frameNumber);
-        File dest = new File(fileName);
-        if (!dest.exists() || !dest.isFile()) {
-            throw new IllegalArgumentException("Invalid page to delete from disk!");
-        }
-        else {
-            if (!dest.delete()) {
-                throw new IOException("Fail to delete page from disk!");
-            }
-        }
+        // do nothing
     }
 
     void writePage(int frameNumber, byte[] data) {
-        String fileName = this.bufferPath + String.valueOf(frameNumber);
+        int fileNumber = (int)(frameNumber / NUM_FILE_PAGES);
+        int bias = frameNumber % NUM_FILE_PAGES;
+        int offset = bias * PAGE_SIZE;
+        String fileName = this.bufferPath + fileNumber;
         File dest = new File(fileName);
         try {
-            InputStream inputStream = new ByteArrayInputStream(data);
-            OutputStream outputStream = new BufferedOutputStream(new FileOutputStream(dest, false));
-            byte[] flush = new byte[PAGE_SIZE];
-            int len = -1;
-            while ((len = inputStream.read(flush)) != -1) {
-                outputStream.write(flush, 0, len);
+            try (FileOutputStream outputStream = new FileOutputStream(dest, false)) {
+                FileChannel channel = outputStream.getChannel();
+                channel.position(offset);
+                channel.write(ByteBuffer.wrap(data));
             }
-            inputStream.close();
-            outputStream.flush();
-            outputStream.close();
         } catch (IOException e) {
             e.printStackTrace();
         }
     }
 
     public byte[] readPage(int frameNumber) {
-        String fileName = this.bufferPath + String.valueOf(frameNumber);
+        int fileNumber = (int)(frameNumber / NUM_FILE_PAGES);
+        int bias = frameNumber % NUM_FILE_PAGES;
+        if (bias == 0) {
+            fileNumber -= 1;
+            bias = NUM_FILE_PAGES;
+        }
+        int offset = (bias - 1) * PAGE_SIZE;
+        String fileName = this.bufferPath + fileNumber;
         File src = new File(fileName);
         byte[] result = null;
         try {
-            InputStream inputStream = new BufferedInputStream(new FileInputStream(src));
+            InputStream fileInputStream = new FileInputStream(src);
+            fileInputStream.skip(offset);
+            BufferedInputStream inputStream = new BufferedInputStream(fileInputStream);
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
             byte[] flush = new byte[PAGE_SIZE];
             int len = -1;
