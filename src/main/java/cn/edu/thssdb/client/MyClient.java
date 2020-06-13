@@ -193,6 +193,9 @@ public class MyClient {
                 case Global.SYNTAX_ERROR_EXCEPTION_CODE:
                     info = "Error: Syntax error";
                     break;
+                case Global.TABLE_ALREADY_EXISTS_EXCEPTION_CODE:
+                    info = "Error: Table already exists";
+                    break;
                 default:
                     break;
             }

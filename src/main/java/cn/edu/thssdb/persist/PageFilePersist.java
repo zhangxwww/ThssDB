@@ -1,4 +1,5 @@
 package cn.edu.thssdb.persist;
+
 import cn.edu.thssdb.pagefile.PageFileConst;
 import cn.edu.thssdb.pagefile.BufferManager;
 import cn.edu.thssdb.pagefile.DiskManager;
@@ -7,138 +8,84 @@ import cn.edu.thssdb.pagefile.FrameDescription;
 import cn.edu.thssdb.schema.TableInfo;
 import cn.edu.thssdb.utils.Global;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 
 
-public class PageFilePersist implements PersistenceOperation{
-    /* When a user joins to a database, infos of those tables in this database will be put in the HashMap.
+public class PageFilePersist implements PersistenceOperation {
+	public HashMap<String, ArrayList<Integer>> tableFramePagesId;
+	private BufferManager bfm;
+	private DiskManager dsm;
+	private HashMap<String, TableInfo> tableInfos;
 
-    tablePageMap include: tableName and which pages in the buffer pool have been occupied by it.
-    tableFramesNum include: tableName and how many frames does it have.
-    At the beginning, all tables don't occupy pages in the buffer pool.
-     */
-    //之后有了database的基础，就可以改为private，用方法来赋值下面两个hash映射表
-    public HashMap<String, ArrayList<Integer>> tableFramePagesId;
-    private BufferManager bfm;
-    private String databaseName;
+	// initialize buffer pool manager and disk manager
+	public PageFilePersist(String dbName, int numPages, HashMap<String, TableInfo> tableInfos) {
+		this.dsm = new DiskManager(Global.ROOT_PATH + dbName);
+		this.bfm = new BufferManager(dbName, numPages, dsm);
+		this.tableInfos = tableInfos;
+	}
 
+	// write table to buffer pool and persist the buffer pool
+	@Override
+	public void storeTable(String tableName, byte[] data) throws IOException {
+		// a reference to the table infos stored in database class
+		ArrayList<Integer> pages = this.tableInfos.get(tableName).framePagesId;
+		int numPages = pages.size();
+		int pageNumNeeded = (int) Math.ceil((float) (data.length) / PageFileConst.PAGE_SIZE);
 
-    //理应还需要databse的一些信息：有哪些表，每个表有多少frame
-    public PageFilePersist(String dbName, int numPages){
-        bfm = new BufferManager(dbName,numPages);
-        databaseName = dbName;
+		// if the table shrinks and don't need so many pages
+		if (pageNumNeeded < numPages) {
+			int numPagesToDelete = numPages - pageNumNeeded;
+			ArrayList<Integer> pagesDeleted = new ArrayList<>();
+			for (int i = 0; i < numPagesToDelete; i++) {
+				int pageToDelete = pages.remove(tableInfos.size() - 1);
+				dsm.deallocatePage(pageToDelete);
+				pagesDeleted.add(pageToDelete);
+			}
+			bfm.clearDeallocatedDiskImages(pagesDeleted);
+		}
+		// otherwise
+		for (int i = 0; i < pageNumNeeded; i++) {
+			byte[] pageData = new byte[PageFileConst.PAGE_SIZE];
+			System.arraycopy(data, i * PageFileConst.PAGE_SIZE, pageData, 0, PageFileConst.PAGE_SIZE);
+			if (i < numPages) {
+				// override existed disk page frames
+				bfm.writeExistedPage(pageData, pages.get(i));
+			} else {
+				// use buffer manager to allocate new page frames and write the data
+				int newFrameNumber = dsm.allocatePage();
+				pages.add(newFrameNumber);
+				bfm.writeNewPage(pageData, newFrameNumber);
+			}
+		}
+	}
 
-    }
+	// flush the buffer pool to disk page frames
+	public void flush() {
+		bfm.flush();
+	}
 
+	// use disk manager to retrieve pages to array buffers and return the buffer
+	@Override
+	public byte[] retrieveTable(String tableName) {
+		ArrayList<Integer> tablePages = tableInfos.get(tableName).framePagesId;
+		int frameNum = tablePages.size();
+		byte[] data = new byte[PageFileConst.PAGE_SIZE * frameNum];
+		for (int i = 0; i < frameNum; i++) {
+			int p = tablePages.get(i);
+			byte[] buf = dsm.readPage(p);
+			int start = i * PageFileConst.PAGE_SIZE;
+			System.arraycopy(buf, 0, data, start, PageFileConst.PAGE_SIZE);
+		}
+		return data;
+	}
 
-    public void addTable(String tbName) {
-        //数据库新增一张表时，也要在内存管理信息中更新信息。
-        //起初，新表所占frameNum=0，在内存中也没有占据页。
-        tableFramePagesId.put(tbName,new ArrayList<>());
-    }
-
-    public void deleteTable(String tbName) {
-        //数据库新增一张表时，也要在内存管理信息中更新信息。
-        //起初，新表所占frameNum=0，在内存中也没有占据页。
-        tableFramePagesId.put(tbName,new ArrayList<>());
-    }
-
-    //table record -> memory
-    @Override
-    public void storeTable(String tableName, byte[] data) {
-
-        if (!tableFramePagesId.containsKey(tableName)){
-            throw new IllegalArgumentException("Try to store table "+tableName+" which is unexisted.");
-        }
-        ArrayList<Integer> pagesInBufferPool = bfm.tablePageMap.get(tableName);
-        ArrayList<Integer> pagesAllocated = new ArrayList<>();
-
-        int pageNumNeeded = (int) Math.ceil((float)data.length / PageFileConst.PAGE_SIZE);
-        int pageNumHad = pagesInBufferPool.size();
-        if (pageNumHad >= pageNumNeeded){
-            int index = 0;
-            for (; index < pageNumNeeded; index++){
-                pagesAllocated.add(pagesInBufferPool.get(index));
-            }
-            for (; index < pageNumHad; index++){
-                bfm.freePage(pagesInBufferPool.get(index));
-                System.out.print("Free page "+pagesInBufferPool.get(index));
-            }
-            for (Integer i:pagesAllocated){
-                bfm.pinPage(i);
-                // Mark those neededPages as not free, to write into those pages
-            }
-        }else{
-            int index = 0;
-            for (Integer i:pagesInBufferPool){
-                bfm.pinPage(i);
-                // Mark those neededPages as not free, to avoid during allocating
-                // duplicate pages are allocated.
-            }
-            ArrayList<Integer> pagesId = bfm.allocatePages(pageNumNeeded-pageNumHad);
-            for (Integer i:pagesId){
-                bfm.pinPage(i);
-                // Mark those neededPages as not free, to write into those pages
-            }
-            pagesAllocated.addAll(pagesInBufferPool);
-            pagesAllocated.addAll(pagesId);
-        }
-
-        bfm.writePages(data,pagesAllocated,tableName);
-
-        for (Integer i : pagesAllocated) {
-            bfm.unpinPage(i);
-        }
-
-        bfm.tablePageMap.replace(tableName,pagesAllocated);
-        tableFramesNum.replace(tableName,pagesAllocated.size());
-        //调试信息
-//        System.out.print(tableName+"新的占据的页为： ");
-//        for (Integer integer : pagesAllocated) {
-//            System.out.print(integer + " ");
-//        }
-//        System.out.println();
-    }
-
-    //table record memory-> disc
-    public void flushTable(String tableName){
-        bfm.flushTable(tableName);
-    }
-
-    //from disc -> memory and get all data
-    @Override
-    public byte[] retrieveTable(String tableName) {
-
-        if (!tableFramesNum.containsKey(tableName)){
-            throw new IllegalArgumentException("Try to retrieve table "+tableName+" which is unexisted.");
-        }
-
-        int frameNum = tableFramesNum.get(tableName);
-
-        byte[] data = new byte[PageFileConst.PAGE_SIZE * frameNum];
-        DiskManager dsm = new DiskManager(Global.ROOT_PATH+databaseName+"/"+tableName);
-        for (int i = 0; i < frameNum; i++){
-            byte[] dataTmp = dsm.readPage(i);
-            for (int j = 0; j < PageFileConst.PAGE_SIZE; j++){
-                int start = i*PageFileConst.PAGE_SIZE;
-                data[start+j] = dataTmp[j];
-            }
-        }
-
-        System.out.println("Retrieve: "+ tableName+" needs "+frameNum+" pages.");
-        ArrayList<Integer> pagesId = bfm.allocatePages(frameNum);
-        for(Integer i: pagesId){
-            bfm.pinPage(i);
-        }
-        //write data to buffer pool
-        bfm.writePages(data,pagesId,tableName);
-
-        for(Integer i: pagesId){
-            bfm.unpinPage(i);
-        }
-        bfm.tablePageMap.put(tableName,pagesId);
-
-        return data;
-    }
+	public void dropTable(String tableName) throws IOException {
+		ArrayList<Integer> pages = tableInfos.get(tableName).framePagesId;
+		for (int p : pages) {
+			dsm.deallocatePage(p);
+		}
+		bfm.clearDeallocatedDiskImages(pages);
+	}
 }

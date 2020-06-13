@@ -4,136 +4,109 @@ import cn.edu.thssdb.exception.NoPageCanBeReplacedException;
 import cn.edu.thssdb.schema.TableInfo;
 import cn.edu.thssdb.utils.Global;
 
+import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 
 public class BufferManager implements PageFileConst {
-    protected Page[] bufferPool;
-    protected FrameDescription[] frameTab;
-    protected HashMap<Integer, FrameDescription> pageMap;
-    protected Replacer replacer;
-    private String databaseName;
+    private Page[] bufferPool;
+    private FrameDescription[] frameTab;
+    private int size;
+    private Replacer replacer;
+    private DiskManager diskManager;
+    private ArrayList<Integer> availablePages = new ArrayList<>();
 
-    public BufferManager(String dbName, int numPages) {
+    public BufferManager(String dbName, int numPages, DiskManager dsm) {
         bufferPool = new Page[numPages];
         frameTab = new FrameDescription[numPages];
         for (int i = 0; i < numPages; i++) {
             bufferPool[i] = new Page();
             frameTab[i] = new FrameDescription(i);
+            availablePages.add(i);
         }
-        pageMap = new HashMap<Integer, FrameDescription>(numPages);
         replacer = new Replacer(numPages);
-        databaseName = dbName;
+        size = numPages;
+        diskManager = dsm;
     }
 
-
-
-
-    public int newPage(Page firstPage, int runningSize) {
-        return 0;
-    }
-
-    //ask for neededNum * (free pages)
-    //this method doesn't include data write or read
-    //it just tell the caller which pages can be used
-    public ArrayList<Integer> allocatePages(int neededNum) {
-//        System.out.println("Begin to allocate Pages.");
-        ArrayList<Integer> pagesIdAllocated = new ArrayList<>();
-        //First,find the free pages that haven't been allocated to a table
-        int curNum = 0;
-        int pageIndex = 0;
-        while(curNum < neededNum && pageIndex < frameTab.length){
-            if (frameTab[pageIndex].isEmpty()){
-                pagesIdAllocated.add(pageIndex);
-                curNum++;
-                pageIndex++;
-            }else{
-                pageIndex++;
-            }
-        }
-        //If not enough, then replacer is needed.
-        if (curNum < neededNum){
-            try{
-                int[] replacedPages = replacer.pickVictims(frameTab,neededNum-curNum);
-                for (int i: replacedPages){
-                    pagesIdAllocated.add((Integer)i);
-                    flushPage(i);//those replaced pages need to be written to disc
-                }
-
+    private int allocatePage() {
+        // First,find the free pages that haven't been allocated to a table
+        if (availablePages.size() > 0) {
+            return availablePages.remove(availablePages.size() - 1);
+        } else {
+            try {
+                int replacedPage = replacer.pickVictims(frameTab,1)[0];
+                pinPage(replacedPage);
+                flushPage(replacedPage);
+                unpinPage(replacedPage);
+                return replacedPage;
             } catch (NoPageCanBeReplacedException | IllegalStateException e) {
                 e.printStackTrace();
             }
         }
-//        System.out.print("Finished. AllocatePages:");
-//        printList(pagesIdAllocated);
-
-        return pagesIdAllocated;
+        return -1;
     }
 
-    //When freePage is called, it means the original page is abandoned.
-    //the content on it doesn't matter
-    public void freePage(int pageIndex) {
-        frameTab[pageIndex] = new FrameDescription(pageIndex);
-    }
-
-    //mark this page as pinned
-    //pinned pages mean someone is using them.
-    public void pinPage(int pageIndex) {
+    // mark this page as pinned so that it cannot be altered
+    private void pinPage(int pageIndex) {
         if (pageIndex >= frameTab.length || pageIndex < 0){
-            throw new IndexOutOfBoundsException("Try to pin Page #"+pageIndex+" In BufferManager.pinPage.");
+            throw new IndexOutOfBoundsException("Try to pin Page #" + pageIndex + " In BufferManager.pinPage.");
         }
         frameTab[pageIndex].pinCount++;
     }
 
-    //cover pages (with pagesId) with data
-    //those pages should be marked as Dirty
-    public void writePages(byte[] data, ArrayList<Integer> pagesId, String mTableName) {
-        int pageNum = (int) Math.ceil((float)data.length / PageFileConst.PAGE_SIZE);
-        if (pageNum != pagesId.size()){
-            throw new IllegalArgumentException("data needs "+pageNum+" pages, but pagesId only contains "+pagesId.size()+" pages");
-        }
-        try{
-            for (int i = 0; i < pageNum; i++){
-                byte[] pageData = new byte[PAGE_SIZE];
-                if (i < pageNum-1){
-                    for (int j = 0; j < PAGE_SIZE ; j++){
-                        pageData[j] = data[i*PAGE_SIZE+j];
-                    }
-                }else if (i == pageNum-1){
-                    //最后一页的data可能是不满的
-                    for (int j = 0; j < PAGE_SIZE &&  (i*PAGE_SIZE+j) < data.length; j++){
-                        pageData[j] = data[i*PAGE_SIZE+j];
-                    }
-
+    public void writeExistedPage(byte[] data, int frameNumber) {
+        boolean cacheHit = false;
+        for (int i = 0; i < size; i++) {
+            if (frameTab[i].frameNumber == frameNumber) {
+                // cache hit
+                cacheHit = true;
+                if (!bufferPool[i].compareContent(data)) {
+                    pinPage(i);
+                    bufferPool[i].setContent(data);
+                    frameTab[i].setDirty(true);
+                    unpinPage(i);
                 }
-
-                int pageIndex = pagesId.get(i);
-                bufferPool[pageIndex].setContent(pageData);
-                frameTab[pageIndex].isDirty = true;
-                frameTab[pageIndex].frameNumber = i;
-                //原本属于oldTable的页不再属于它了，所以修改tablePageMap
-                String oldTable = frameTab[pageIndex].tableName;
-                if (oldTable != null){
-                    ArrayList<Integer> occupiedPages = tablePageMap.get(oldTable);
-                    occupiedPages.remove((Integer) pageIndex);
-                    tablePageMap.replace(oldTable,occupiedPages);
-                }
-
-                frameTab[pageIndex].tableName = mTableName;
-                replacer.visitPage(pageIndex);
+                break;
             }
-        }catch (ArrayIndexOutOfBoundsException e){
-            e.printStackTrace();
+        }
+        if (!cacheHit) {
+            int pageId = allocatePage();
+            pinPage(pageId);
+            frameTab[pageId].setFrameNumber(frameNumber);
+            frameTab[pageId].setDirty(true);
+            bufferPool[pageId].setContent(data);
+            unpinPage(pageId);
         }
     }
 
-    public void pinPage(int pageNumber, Page page, boolean skipReading) {
-
+    public void writeNewPage(byte[] data, int frameNumber) {
+        int pageId = allocatePage();
+        if (pageId != -1) {
+            pinPage(pageId);
+            frameTab[pageId].setFrameNumber(frameNumber);
+            frameTab[pageId].setDirty(true);
+            bufferPool[pageId].setContent(data);
+            unpinPage(pageId);
+        } else {
+            System.out.println("Unable to allocate new pages");
+        }
     }
 
-    public void unpinPage(int pageIndex) {
+    public void clearDeallocatedDiskImages(ArrayList<Integer> pages) {
+        for (int i = 0; i < size; i++) {
+            if (pages.contains(frameTab[i].frameNumber)) {
+                pinPage(i);
+                frameTab[i].setDirty(false);
+                frameTab[i].setFrameNumber(PageFileConst.INVALID_PAGEID);
+                unpinPage(i);
+            }
+        }
+    }
+
+    private void unpinPage(int pageIndex) {
         if (pageIndex >= frameTab.length || pageIndex < 0){
             throw new IndexOutOfBoundsException("Try to unpin Page #"+pageIndex+" In BufferManager.unpinPage.");
         }
@@ -144,80 +117,19 @@ public class BufferManager implements PageFileConst {
         }
     }
 
-    public void unpinPage(int pageNumber, boolean isDirty) {
-
-    }
-
-    public void flushAll() {
-        for (int i = 0; i < bufferPool.length; i++){
-            if(frameTab[i].isPinned()){
-//                throw new IllegalStateException("In BufferManager.flushPage.");
-            }else{
-                DiskManager discM = new DiskManager(frameTab[i].tableName);
-
-                if (frameTab[i].isDirty){
-                    pinPage(i);
-                    discM.writePage(frameTab[i].frameNumber,bufferPool[i].getContent());
-                    frameTab[i].isDirty = false;
-                    unpinPage(i);
-                }
-            }
+    public void flush(){
+        for (int i = 0; i < size; i++) {
+            flushPage(i);
         }
     }
 
-
-    public void flushTable(String tableName){
-        DiskManager discM = new DiskManager(Global.ROOT_PATH+databaseName+"/"+tableName);
-        for (int i = 0; i < bufferPool.length; i++){
-            if(frameTab[i].isPinned()){
-//                throw new IllegalStateException("In BufferManager.flushPage.");
-            }else{
-                String name = frameTab[i].tableName;
-                if ( name!=null &&name.equals(tableName)&&frameTab[i].isDirty){
-                    pinPage(i);
-                    discM.writePage(frameTab[i].frameNumber,bufferPool[i].getContent());
-                    frameTab[i].isDirty = false;
-                    unpinPage(i);
-                }
-            }
+    private void flushPage(int pageNumber) {
+        FrameDescription frameDescription = frameTab[pageNumber];
+        int frameNumber = frameTab[pageNumber].getFrameNumber();
+        pinPage(pageNumber);
+        if (frameDescription.isDirty) {
+            diskManager.writePage(frameNumber, bufferPool[pageNumber].getContent());
         }
-
+        unpinPage(pageNumber);
     }
-
-    protected void flushPage(int pageIndex){
-        if(frameTab[pageIndex].isPinned()){
-            throw new IllegalStateException("In BufferManager.flushPage.");
-        }
-        DiskManager discM = new DiskManager(frameTab[pageIndex].tableName);
-
-        if (frameTab[pageIndex].isDirty){
-            pinPage(pageIndex);
-            discM.writePage(frameTab[pageIndex].frameNumber,bufferPool[pageIndex].getContent());
-            frameTab[pageIndex].isDirty = false;
-            unpinPage(pageIndex);
-        }
-    }
-
-    public int getNumPages() {
-        return bufferPool.length;
-    }
-
-    public int getNumUnpinned() {
-        int count = 0;
-        final int numPages = getNumPages();
-        for (int i = 0; i < numPages; i++) {
-            if (frameTab[i].pinCount == 0) {
-                count++;
-            }
-        }
-        return count;
-    }
-
-    public  void printList(List<Integer> i){
-        for( Integer t: i){
-            System.out.print(t+" ");
-        }
-        System.out.println();
-    }
-
 }

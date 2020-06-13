@@ -1,5 +1,7 @@
 package cn.edu.thssdb.persist;
 
+import cn.edu.thssdb.utils.Global;
+
 import java.io.*;
 
 public class NaiveSerializationPersist implements PersistenceOperation {
@@ -35,5 +37,18 @@ public class NaiveSerializationPersist implements PersistenceOperation {
             e.printStackTrace();
         }
         return data;
+    }
+
+    @Override
+    public void dropTable(String tableName) throws IOException {
+        File dest = new File(tableName);
+        if (!dest.exists() || dest.isFile()) {
+            throw new IllegalArgumentException("Invalid file to delete from disk!");
+        }
+        else {
+            if (!dest.delete()) {
+                throw new IOException("Fail to delete file from disk!");
+            }
+        }
     }
 }

@@ -1,5 +1,7 @@
 package cn.edu.thssdb.pagefile;
 
+import java.util.Arrays;
+
 public class Page implements PageFileConst {
     protected byte[] content;
 
@@ -20,6 +22,10 @@ public class Page implements PageFileConst {
 
     public byte[] getContent() {
         return content;
+    }
+
+    boolean compareContent(byte[] other) {
+        return Arrays.equals(this.content, other);
     }
 
     public void setPage(Page page) {

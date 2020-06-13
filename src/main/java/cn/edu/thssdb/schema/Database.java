@@ -3,6 +3,7 @@ package cn.edu.thssdb.schema;
 
 import cn.edu.thssdb.exception.DuplicateKeyException;
 import cn.edu.thssdb.exception.KeyNotExistException;
+import cn.edu.thssdb.exception.TableAlreadyExistsException;
 import cn.edu.thssdb.exception.TableNotExistsException;
 import cn.edu.thssdb.persist.PageFilePersist;
 import cn.edu.thssdb.query.WhereCondition;
@@ -12,265 +13,236 @@ import cn.edu.thssdb.utils.Global;
 
 import java.io.*;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 public class Database {
 
-    private String name;
-    private HashMap<String, Table> tables;
-    ReentrantReadWriteLock lock;
-    private HashMap<String, TableInfo> tableInfos;
-    public PageFilePersist persistManager;
+	private String name;
+	private HashMap<String, Table> tables;
+	ReentrantReadWriteLock lock;
+	private HashMap<String, TableInfo> tableInfos;
+	public PageFilePersist persistManager;
 
-    boolean isRecovered = false;
+	boolean isRecovered = false;
+    int maxPageFrameNumber = -1;
 
+	public Database(String name) {
+		this.name = name;
+		this.tables = new HashMap<>();
+		this.lock = new ReentrantReadWriteLock();
 
-    public Database(String name) {
-        this.name = name;
-        this.tables = new HashMap<>();
-        this.lock = new ReentrantReadWriteLock();
+	}
 
-    }
+	public void persist() {
+		// store table
+		for (Table t : tables.values()) {
+			byte[] bData = t.serialize();
+			try {
+				persistManager.storeTable(t.tableName, bData); //to buffer pool
+			} catch (IOException e) {
+				e.printStackTrace();
+			}
+		}
+        persistManager.flush(); // flush the buffer pool to disk
 
-    public void persist() {
-        // TODO
-        //把tables先存好
-        for (Table t : tables.values()) {
-            byte[] bData = t.serialize();
-            persistManager.storeTable(t.tableName, bData); //to buffer pool
-            persistManager.flushTable(t.tableName); // to disc
-        }
-        //把管理信息存好
-        //根据tables和psm来set一下tableInfos
-        tableInfos.clear();
-        try {
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH + name + "/manage", false));
-            HashMap<String, ArrayList<Integer>> tableFramePages = persistManager.tableFramePagesId;
-            for (Table t : tables.values()) {
-                ArrayList<Integer> framePages = tableFramePages.get(t.tableName);
-                TableInfo tbInfo = new TableInfo(t.tableName, t.getColumns(), t.primaryIndex, framePages);
-                objectOutputStream.writeObject(tbInfo);
-                tableInfos.put(t.tableName, tbInfo);
-            }
-            objectOutputStream.close();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+		// store table infos (meta data)
+		try {
+			ObjectOutputStream objectOutputStream = new ObjectOutputStream(new FileOutputStream(Global.ROOT_PATH + name + "/manage", false));
+			for (TableInfo tbInfo : tableInfos.values()) {
+				objectOutputStream.writeObject(tbInfo);
+			}
+			objectOutputStream.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
-    //新建表
-    public Table createTable(String tbName, Column[] columns) {
-        // TODO
-        if (tables.containsKey(tbName)) {
-            System.out.println("Table " + tbName + " exists");
-        } else {
-            Table newTable = new Table(name, tbName, columns);
-            tables.put(tbName, newTable);
-            persistManager.addTable(tbName); //在存储管理中更新信息
-            return newTable;
-        }
-        return null;
+	public Table createTable(String tbName, Column[] columns) {
+		if (tables.containsKey(tbName)) {
+			throw new TableAlreadyExistsException();
+		} else {
+			Table newTable = new Table(name, tbName, columns);
+			tables.put(tbName, newTable);
+			TableInfo newTableInfo = new TableInfo(tbName, newTable.getColumns(), newTable.getPrimaryKeyIndex(), new ArrayList<>());
+			tableInfos.put(tbName, newTableInfo);
+			return newTable;
+		}
+	}
 
-    }
+	public void dropTable(String tbName) {
+		// TODO
+		try {
+			if (!tables.containsKey(tbName)) {
+				System.out.println("Table " + tbName + " not exists");
+				throw new TableNotExistsException();
+			} else {
+				persistManager.dropTable(tbName);
+				tables.remove(tbName);
+				tableInfos.remove(tbName);
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 
-    //丢弃整张表
-    public void dropTable(String tbName) {
-        // TODO
-        try {
-            if (!tables.containsKey(tbName)) {
-                System.out.println("Table " + tbName + " not exists");
-                throw new TableNotExistsException();
-            } else {
-                //把磁盘文件删除
-                ArrayList<Integer> framePages = persistManager.tableFramePagesId.get(tbName);
-                //注意：psm中tableFramesNum存储的是：上一次table进行serialize时占据多少frame
-                //也就是说，如果table有过增删，但未曾serialize的化，frameNum记录的是旧值
-                //且由于serialize过后不一定进行了persist，所以不见得所有的frame都存到了磁盘中
-                for (int i : framePages) {
-                    File delFile = new File(Global.ROOT_PATH + name + "/" + i);
-                    if (delFile.exists()) {
-                        boolean succ = delFile.delete();
-                        if (!succ) {
-                            throw new IOException("Deleting table " + tbName + " failed.");
-                        }
-                    }
-                }
-                tables.remove(tbName);
-                //在存储管理中更新信息
-                persistManager.deleteTable(tbName);
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+	}
 
-    }
+	// drop database
+	public void drop() {
+		try {
+			File dir = new File(Global.ROOT_PATH + name);
+			if (dir.isDirectory()) {
+				String[] children = dir.list();
+				for (int i = 0; i < children.length; i++) {
+					File delFile = new File(dir, children[i]);
+					boolean success = delFile.delete();
+					if (!success)
+						throw new IOException("Deleting" + children[i] + "failed.");
+				}
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 
 
-    //丢弃自身
-    public void drop() {
-        // TODO
-        // 每个database有自己的内存池，由java回收
-        // 从磁盘中删去文件
-        try {
-            File dir = new File(Global.ROOT_PATH + name);
-            if (dir.isDirectory()) {
-                String[] children = dir.list();
-                for (int i = 0; i < children.length; i++) {
-                    File delFile = new File(dir,children[i]);
-                    boolean success = delFile.delete();
-                    if (!success)
-                        throw new IOException("Deleting" + children[i] + "failed.");
-                }
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
+	public void recover() throws IOException {
+		if (isRecovered) return;
 
+		// recover meta data from disk file `manage`
+		ObjectInputStream ois = null;
+		tableInfos = new HashMap<>(0);
+		tables.clear();
+		try {
+			File manageFile = new File(Global.ROOT_PATH + name + "/manage");
+			if (!manageFile.exists()) {
+				manageFile.createNewFile();
+			} else {
+				ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
+				while (true) {
+					TableInfo tbInfo = (TableInfo) ois.readObject();
+					Column[] cols = new Column[tbInfo.columns.size()];
+					for (int i = 0; i < cols.length; i++) {
+						cols[i] = tbInfo.columns.get(i);
+					}
+					Table newTable = new Table(name, tbInfo.tableName, cols, tbInfo.primaryIndex);
+					tables.put(tbInfo.tableName, newTable);
+					tableInfos.put(tbInfo.tableName, tbInfo);
+				}
 
-    public void recover() throws IOException {
-        if (isRecovered) return;
+			}
 
-        // 从manage文件中恢复管理信息
-        ObjectInputStream ois = null;
-        tableInfos = new HashMap<>(0);
-        tables.clear();
-        try {
-            File manageFile = new File(Global.ROOT_PATH + name + "/manage");
-            if (!manageFile.exists()) {
-                manageFile.createNewFile();
-            } else {
-                ois = new ObjectInputStream(new FileInputStream(Global.ROOT_PATH + name + "/manage"));
-                while (true) {
-                    TableInfo tbInfo = (TableInfo) ois.readObject();
-                    Column[] cols = new Column[tbInfo.columns.size()];
-                    for (int i = 0; i < cols.length; i++) {
-                        cols[i] = tbInfo.columns.get(i);
-                    }
-                    Table newTable = new Table(name, tbInfo.tableName, cols, tbInfo.primaryIndex);
-                    tables.put(tbInfo.tableName, newTable);
-                    tableInfos.put(tbInfo.tableName, tbInfo);
-                }
+		} catch (EOFException e) {
+			System.out.println("读取数据库的表信息： 类对象已完全读入");
+		} catch (FileNotFoundException e) {
 
-            }
+		} catch (Exception e) {
+			e.printStackTrace();
+		} finally {
+			isRecovered = true;
+			if (ois != null) {
+				ois.close();
+			}
+			persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM, tableInfos);
+			System.out.println("recover database: " + name);
 
-        } catch (EOFException e) {
-            System.out.println("读取数据库的表信息： 类对象已完全读入");
-        } catch (FileNotFoundException e) {
+			System.out.println("tableInfo: ");
+			for (TableInfo tb : tableInfos.values()) {
+				System.out.println(tb.tableName + tb.columns.toString());
+			}
+			for (Table t : tables.values()) {
+				byte[] bData = persistManager.retrieveTable(t.tableName);
+				t.recover(bData); //表获取数据
+			}
+			this.recoverUncommittedCmd(0);
+		}
+	}
 
-        } catch (Exception e) {
-            e.printStackTrace();
-        } finally {
-            isRecovered = true;
-            if (ois != null) {
-                ois.close();
-            }
-            persistManager = new PageFilePersist(name, Global.BUFFER_POOL_PAGE_NUM);
-            System.out.println("recover database: " + name);
+	public String getName() {
+		return name;
+	}
 
-            System.out.println("tableInfo: ");
-            for (TableInfo tb : tableInfos.values()) {
-                System.out.println(tb.tableName + tb.columns.toString());
-            }
-            for (Table t : tables.values()) {
-                byte[] bData = persistManager.retrieveTable(t.tableName);
-                t.recover(bData); //表获取数据
-            }
-            this.recoverUncommittedCmd(0);
-        }
-    }
+	public void quit() {
+		persist();
+		persistManager = null;
+	}
 
-    public String getName() {
-        return name;
-    }
+	public Table getTable(String tbName) {
+		Table t = tables.get(tbName);
+		if (t == null) {
+			throw new TableNotExistsException();
+		}
+		return t;
+	}
 
-    public void quit() {
-        //存储到磁盘
-        persist();
-        //回收内存池
-        persistManager = null;
-    }
+	public void recoverUncommittedCmd(long transactionId) {
+		//需要倒序处理
+		LogHandler logHandler = new LogHandler(this);
+		ArrayList<String> uncommittedCmds = new ArrayList<>(0);
+		StatementAdapter adapter = new StatementAdapter(this, 0);
+		StringBuilder remain = new StringBuilder();
+		try {
+			File file = new File(logHandler.getPath());
+			if (file.exists()) {
+				FileReader fr = new FileReader(file);
+				BufferedReader br = new BufferedReader(fr);
+				String line = null;
+				while ((line = br.readLine()) != null) {
+					if (line.length() > 0) {
+						uncommittedCmds.add(line);
+					}
+				}
+				//开始恢复
+				int cmdNum = uncommittedCmds.size();
+				for (int i = cmdNum - 1; i >= 0; i--) {
+					String[] strMsg = uncommittedCmds.get(i).split(" ");
+					Long logTransactionId = Long.parseLong(strMsg[0]);
+					if (logTransactionId != transactionId && transactionId != 0) {
+						remain.append(uncommittedCmds.get(i)).append("\r\n");
+						continue;
+					}
+					String cmd = strMsg[1];
+					String tbName = strMsg[2];
+					if (cmd.equals("CREATE")) {
+						this.dropTable(tbName);
+					} else if (cmd.equals("DROP")) {
+						//由于目前在adpater里，对于事务状态下的drop就是什么也没动，所以这个就不用处理了
+						continue;
+					} else if (cmd.equals("DELETE")) {
+						int attrNum = Integer.parseInt(strMsg[3]);
+						String[] attrValues = new String[attrNum];
+						for (int j = 0; j < attrNum; j++) {
+							attrValues[j] = strMsg[4 + j];
+						}
+						try {
+							adapter.insertTableRow(tbName, attrValues);
+						} catch (DuplicateKeyException ignored) {
+						}
+					} else if (cmd.equals("INSERT")) {
+						String primaryKey = strMsg[3];
+						String primaryVal = strMsg[4];
+						WhereCondition wc = new WhereCondition("=", tbName, primaryKey, primaryVal);
+						try {
+							adapter.delFromTable(tbName, wc);
+						} catch (KeyNotExistException ignored) {
+						}
+					} else {
+						System.out.println("Wrong Cmd");
+					}
+				}
+				this.persist(); //to disc
+				br.close();
+				fr.close();
 
-    public Table getTable(String tbName) {
-        Table t = tables.get(tbName);
-        if (t == null) {
-            throw new TableNotExistsException();
-        }
-        return t;
-    }
-
-    public void recoverUncommittedCmd(long transactionId) {
-        //需要倒序处理
-        LogHandler logHandler = new LogHandler(this);
-        ArrayList<String> uncommittedCmds = new ArrayList<>(0);
-        StatementAdapter adapter = new StatementAdapter(this, 0);
-        StringBuilder remain = new StringBuilder();
-        try {
-            File file = new File(logHandler.getPath());
-            if (file.exists()) {
-                FileReader fr = new FileReader(file);
-                BufferedReader br = new BufferedReader(fr);
-                String line = null;
-                while ((line = br.readLine()) != null) {
-                    if (line.length() > 0) {
-                        uncommittedCmds.add(line);
-                    }
-                }
-                //开始恢复
-                int cmdNum = uncommittedCmds.size();
-                for (int i = cmdNum - 1; i >= 0; i--) {
-                    String[] strMsg = uncommittedCmds.get(i).split(" ");
-                    Long logTransactionId = Long.parseLong(strMsg[0]);
-                    if (logTransactionId != transactionId && transactionId != 0) {
-                        remain.append(uncommittedCmds.get(i)).append("\r\n");
-                        continue;
-                    }
-                    String cmd = strMsg[1];
-                    String tbName = strMsg[2];
-                    if (cmd.equals("CREATE")) {
-                        this.dropTable(tbName);
-                    } else if (cmd.equals("DROP")) {
-                        //由于目前在adpater里，对于事务状态下的drop就是什么也没动，所以这个就不用处理了
-                        continue;
-                    } else if (cmd.equals("DELETE")) {
-                        int attrNum = Integer.parseInt(strMsg[3]);
-                        String[] attrValues = new String[attrNum];
-                        for (int j = 0; j < attrNum; j++) {
-                            attrValues[j] = strMsg[4 + j];
-                        }
-                        try {
-                            adapter.insertTableRow(tbName, attrValues);
-                        } catch (DuplicateKeyException ignored) {
-                        }
-                    } else if (cmd.equals("INSERT")) {
-                        String primaryKey = strMsg[3];
-                        String primaryVal = strMsg[4];
-                        WhereCondition wc = new WhereCondition("=", tbName, primaryKey, primaryVal);
-                        try {
-                            adapter.delFromTable(tbName, wc);
-                        } catch (KeyNotExistException ignored) {
-                        }
-                    } else {
-                        System.out.println("Wrong Cmd");
-                    }
-                }
-                this.persist(); //to disc
-                br.close();
-                fr.close();
-
-                //清空该文件
-                FileOutputStream fileWriter = new FileOutputStream(file, false);
-                fileWriter.write(remain.toString().getBytes());
-                fileWriter.flush();
-                fileWriter.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
+				//清空该文件
+				FileOutputStream fileWriter = new FileOutputStream(file, false);
+				fileWriter.write(remain.toString().getBytes());
+				fileWriter.flush();
+				fileWriter.close();
+			}
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+	}
 }

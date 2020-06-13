@@ -5,15 +5,17 @@ import java.util.Arrays;
 
 public class DiskManager implements PageFileConst {
     private String bufferPath;
-
+    private int maxFrameNumber;
     public DiskManager(String bufferPath) {
         this.bufferPath = bufferPath;
     }
 
-    public void allocatePage(int frameNumber) {
+    public int allocatePage() {
         byte[] nullByte = new byte[PAGE_SIZE];
         Arrays.fill(nullByte, (byte)0);
-        writePage(frameNumber, nullByte);
+        maxFrameNumber++;
+        writePage(maxFrameNumber, nullByte);
+        return maxFrameNumber;
     }
 
     public void deallocatePage(int frameNumber) throws IOException {
@@ -29,7 +31,7 @@ public class DiskManager implements PageFileConst {
         }
     }
 
-    public void writePage(int frameNumber, byte[] data) {
+    void writePage(int frameNumber, byte[] data) {
         String fileName = this.bufferPath + String.valueOf(frameNumber);
         File dest = new File(fileName);
         try {

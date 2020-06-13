@@ -2,13 +2,13 @@ package cn.edu.thssdb.pagefile;
 
 public class FrameDescription implements PageFileConst{
     public int index;
-    public int frameNumber;
-    public int pinCount;
-    public boolean isDirty;
-    public int state;
+    int frameNumber;
+    int pinCount;
+    boolean isDirty;
+    private int state;
 
 
-    public FrameDescription(int index) {
+    FrameDescription(int index) {
         this.index = index;
         this.frameNumber = INVALID_PAGEID;
         this.pinCount = 0;
@@ -16,8 +16,23 @@ public class FrameDescription implements PageFileConst{
         this.state = 0;
     }
 
-    public boolean isPinned(){return pinCount != 0;}
+    boolean isPinned(){return pinCount != 0;}
 
-    public boolean isEmpty(){return frameNumber == INVALID_PAGEID;}
+    boolean isEmpty(){return frameNumber == INVALID_PAGEID;}
 
+    void setFrameNumber(int frameNumber) {
+        this.frameNumber = frameNumber;
+    }
+
+    void setDirty(boolean dirty) {
+        isDirty = dirty;
+    }
+
+    int getFrameNumber() {
+        return frameNumber;
+    }
+
+    public boolean isDirty() {
+        return isDirty;
+    }
 }
